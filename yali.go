@@ -2,8 +2,6 @@ package main
 
 import "strings"
 
-type Symbol string
-
 func tokenise(chars string) []string {
 	chars = strings.Replace(
 		chars, "(", " ( ", -1,
