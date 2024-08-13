@@ -17,10 +17,3 @@ func tokenise(chars string) []string {
 	}
 	return tokens
 }
-
-// This is going to require quite a different approach to lis.py
-// due to Go's type rigidity. I'll need to be dirty at the low
-// level and make use of {}interface, and I will need to define
-// value and cons interfaces to allow the seamless processing
-// of any part of the expression.
-func readFromTokens(tokens []string) []
