@@ -37,6 +37,7 @@ const (
 	SYMBOL
 )
 
+// Create an array of strings, explicitly assigning items to each index
 var tokens = [...]string{
 	OPEN:   "(",
 	CLOSE:  ")",
@@ -65,6 +66,8 @@ var patterns = []Pattern{
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
 }
 
+// this might want to be renamed. it takes string tokens and replaces them with
+// int/Token tokens, but it is distinct from the functionality in parse.go.
 func ParseTokens(programTokenised []string) []*Token {
 	var tokens []*Token
 	for _, lit := range programTokenised {
