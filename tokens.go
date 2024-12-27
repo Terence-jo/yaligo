@@ -26,8 +26,8 @@ type Pattern struct {
 }
 
 type Token struct {
-	tok TokenClass
-	lit string
+	Class TokenClass
+	Lit   string
 }
 
 const (
@@ -35,6 +35,8 @@ const (
 	CLOSE
 	NUMBER
 	SYMBOL
+	DEFINE
+	IF
 )
 
 // Create an array of strings, explicitly assigning items to each index
@@ -43,6 +45,8 @@ var tokens = [...]string{
 	CLOSE:  ")",
 	NUMBER: "NUMBER",
 	SYMBOL: "SYMBOL",
+	DEFINE: "DEFINE",
+	IF:     "IF",
 }
 
 func (t TokenClass) String() string {
@@ -68,13 +72,13 @@ var patterns = []Pattern{
 
 // this might want to be renamed. it takes string tokens and replaces them with
 // int/Token tokens, but it is distinct from the functionality in parse.go.
-func ParseTokens(programTokenised []string) []*Token {
-	var tokens []*Token
+func LexTokens(programTokenised []string) []Token {
+	var tokens []Token
 	for _, lit := range programTokenised {
 		for _, pattern := range patterns {
 			matches := pattern.regexp.FindStringSubmatch(lit)
 			if matches != nil {
-				tokens = append(tokens, &Token{pattern.tok, lit})
+				tokens = append(tokens, Token{pattern.tok, lit})
 				break
 			}
 		}

@@ -19,7 +19,7 @@ func TestParseTokens(t *testing.T) {
 		{NUMBER, "6.4"},
 		{CLOSE, ")"},
 	}
-	tokens := ParseTokens(program)
+	tokens := LexTokens(program)
 	var got []Token
 	for _, tok := range tokens {
 		got = append(got, *tok)
