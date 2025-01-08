@@ -1,5 +1,10 @@
 package main
 
+// implementing the main List data structure as a linked list intitally because it
+// is the most aligned with Lisp semantics. I do wonder how a slice  of arbitrary types
+// might work though.
+
+// consider renaming, and see whether back links are really necessary
 type Linker interface {
 	Next() Linker
 	Prev() Linker
@@ -47,7 +52,7 @@ type SymbolItem struct {
 
 type ListItem struct {
 	item
-	*list
+	Data *list
 }
 
 // Putting Lisp-like semantics over the Linker interface defined above
@@ -56,10 +61,17 @@ type list struct {
 }
 
 // head is a dummy head, an empty `item`
-func List(firstItem Linker) *list {
+func List(items ...Linker) *list {
 	head := item{}
-	head.SetNext(firstItem)
-	firstItem.SetPrev(&head)
+	if len(items) == 0 {
+		return &list{&head}
+	}
+	var cur Linker = &head
+	for _, item := range items {
+		cur.SetNext(item)
+		item.SetPrev(cur)
+		cur = item
+	}
 	return &list{&head}
 }
 

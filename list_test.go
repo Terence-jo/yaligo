@@ -24,7 +24,7 @@ func TestList(t *testing.T) {
 	}
 
 	list := ListItem{
-		list: List(&first),
+		Data: List(&first),
 	}
 	outer := IntItem{Data: 5}
 	outerThird := SymbolItem{Data: "x"}
@@ -36,7 +36,7 @@ func TestList(t *testing.T) {
 	if !ok {
 		t.Error("expected a ListItem")
 	}
-	if retrievedList.Car() != &first {
-		t.Errorf("got %v wanted %v", retrievedList.Car(), &first)
+	if retrievedList.Data.Car() != &first {
+		t.Errorf("got %v wanted %v", retrievedList.Data.Car(), &first)
 	}
 }

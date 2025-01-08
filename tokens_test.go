@@ -22,7 +22,7 @@ func TestParseTokens(t *testing.T) {
 	tokens := LexTokens(program)
 	var got []Token
 	for _, tok := range tokens {
-		got = append(got, *tok)
+		got = append(got, tok)
 	}
 
 	if !reflect.DeepEqual(want, got) {

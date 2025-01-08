@@ -22,34 +22,40 @@ func tokenise(chars string) []string {
 	return tokens
 }
 
-func readFromTokens(tokens []Token) (Linker, error) {
+func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
 	if len(tokens) == 0 {
-		return nil, errors.New("unexpected EOF")
+		return nil, 0, errors.New("unexpected EOF")
 	}
-	token := tokens[0]
-	tokens = tokens[1:]
+	token := tokens[pos]
 	// need to think harder about how this should work and testing it.
 	// to make it more general I might need a dummy head in the List
 	// and have Car() return its next element, so I would access it
 	// directly here.
 	if token.Class == OPEN {
 		// start a list and recur to fill it
-		list := List(nil)
+		pos++
+		list := List()
 		cur := list.head
-		for tokens[0].Class != CLOSE {
-			next, err := readFromTokens(tokens)
+		for tokens[pos].Class != CLOSE {
+			next, new_pos, err := readFromTokens(tokens, pos)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 			cur.SetNext(next)
 			cur = next
+			pos = new_pos
 		}
-		expr := ListItem{list: list}
-		return &expr, nil
+		expr := ListItem{Data: list}
+		return &expr, pos, nil
 	} else if token.Class == CLOSE {
-		return nil, errors.New("unexpected )")
+		return nil, 0, errors.New("unexpected )")
 	}
-	return atom(token)
+	atom, err := atom(token)
+	if err != nil {
+		return nil, 0, err
+	}
+	pos++
+	return atom, pos, nil
 }
 
 func atom(token Token) (Linker, error) {
