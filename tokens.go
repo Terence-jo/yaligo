@@ -70,8 +70,6 @@ var patterns = []Pattern{
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
 }
 
-// this might want to be renamed. it takes string tokens and replaces them with
-// int/Token tokens, but it is distinct from the functionality in parse.go.
 func LexTokens(programTokenised []string) []Token {
 	var tokens []Token
 	for _, lit := range programTokenised {

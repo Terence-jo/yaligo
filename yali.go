@@ -27,10 +27,6 @@ func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
 		return nil, 0, errors.New("unexpected EOF")
 	}
 	token := tokens[pos]
-	// need to think harder about how this should work and testing it.
-	// to make it more general I might need a dummy head in the List
-	// and have Car() return its next element, so I would access it
-	// directly here.
 	if token.Class == OPEN {
 		// start a list and recur to fill it
 		pos++
@@ -60,6 +56,8 @@ func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
 
 func atom(token Token) (Linker, error) {
 	if token.Class == NUMBER {
+		// is this acceptable as a way to try parsing the numbers? and do I
+		// just want to make everything float?
 		intval, err := strconv.ParseInt(token.Lit, 10, 64)
 		if err != nil {
 			floatval, err := strconv.ParseFloat(token.Lit, 64)
