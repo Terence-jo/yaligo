@@ -93,18 +93,20 @@ func TestReadFromTokens(t *testing.T) {
 }
 
 func TestEval(t *testing.T) {
-	list := NewList(
-		&SymbolItem{Data: "+"},
-		&IntItem{Data: 1},
-		&IntItem{Data: 1},
-	)
+	list := &ListItem{
+		Data: NewList(
+			&SymbolItem{Data: "+"},
+			&IntItem{Data: 1},
+			&IntItem{Data: 1},
+		),
+	}
 	got, err := Eval(list)
 	if err != nil {
 		t.Error(err)
 	}
-	want := 2
+	want := 2.0
 	if got != want {
-		t.Errorf("got %d, wanted %d", got, want)
+		t.Errorf("got %v, wanted %v", got, want)
 	}
 }
 

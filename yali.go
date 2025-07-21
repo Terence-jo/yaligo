@@ -2,9 +2,20 @@ package main
 
 import (
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 )
+
+func addOp(x float64, y float64) float64 {
+	return x + y
+}
+func multOp(x float64, y float64) float64 {
+	return x * y
+}
+func divOp(x float64, y float64) float64 {
+	return x / y
+}
 
 // Eval() will evaluate the list it is passed. It will return a number
 // at this stage, but in the future will need to be flexible enough to
@@ -19,9 +30,57 @@ import (
 // to mind is to model the environment as a map of maps, but perhaps a tree
 // of maps would be more appropriate. That would allow clearer definition
 // right?
-func Eval(l *List) (any, error) {
-	// We have a list
-	return 1, nil
+//
+// See about structuring the data types to be able to approach this with actual lisp-like
+// semantics. That would be nice.
+func Eval(item Linker) (any, error) {
+	// I had forgotten that type switches could be so elegant in Go. this is nice!
+	switch item := item.(type) {
+	case *IntItem:
+		floatRet := float64(item.Data)
+		return floatRet, nil
+	case *FloatItem:
+		return item.Data, nil
+	case *SymbolItem:
+		op := item.Data
+		switch op {
+		case "+":
+			return reduceNums(item, addOp, 0.0)
+		case "*":
+			return reduceNums(item, multOp, 1.0)
+		case "/":
+			item := item.Next()
+			left, err := Eval(item)
+			if err != nil {
+				return nil, err
+			}
+			floatLeft, ok := left.(float64)
+			if !ok {
+				return math.NaN(), errors.New("expected number as operand to /")
+			}
+			return reduceNums(item.Next(), divOp, floatLeft)
+		}
+	case *ListItem:
+		return Eval(item.Data.Car())
+	}
+	return nil, errors.New("type did not match")
+}
+
+func reduceNums(item Linker, fn func(float64, float64) float64, initVal float64) (float64, error) {
+	total := initVal
+	for item.Next() != nil {
+		right, err := Eval(item.Next())
+		if err != nil {
+			return math.NaN(), err
+		}
+		floatRight, ok := right.(float64)
+		if !ok {
+			return math.NaN(), errors.New("expected number as operand")
+		}
+		total = fn(total, floatRight)
+		item = item.Next()
+	}
+	return total, nil
 }
 
 func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
