@@ -75,13 +75,13 @@ func TestReadFromTokens(t *testing.T) {
 	if !ok {
 		t.Error("did not parse to a list")
 	}
-	innerList := List(
+	innerList := NewList(
 		&SymbolItem{Data: "-"},
 		&IntItem{Data: 5},
 		&IntItem{Data: 6},
 	)
 	referenceList := &ListItem{
-		Data: List(
+		Data: NewList(
 			&SymbolItem{Data: "define"},
 			&SymbolItem{Data: "x"},
 			&IntItem{Data: 10},
@@ -90,13 +90,27 @@ func TestReadFromTokens(t *testing.T) {
 		),
 	}
 	assertListEqual(t, parsedList, referenceList)
-	// if !reflect.DeepEqual(parsed, list) {
-	// 	t.Errorf("got %v, wanted %v", parsed, list)
-	// }
+}
+
+func TestEval(t *testing.T) {
+	list := NewList(
+		&SymbolItem{Data: "+"},
+		&IntItem{Data: 1},
+		&IntItem{Data: 1},
+	)
+	got, err := Eval(list)
+	if err != nil {
+		t.Error(err)
+	}
+	want := 2
+	if got != want {
+		t.Errorf("got %d, wanted %d", got, want)
+	}
 }
 
 func assertListEqual(t testing.TB, testList *ListItem, referenceList *ListItem) {
-	for true {
+	t.Helper()
+	for {
 		switch testList.Data.Car().(type) {
 		case *ListItem:
 			innerTestList := testList.Data.Car().(*ListItem)
@@ -120,6 +134,7 @@ func assertListEqual(t testing.TB, testList *ListItem, referenceList *ListItem) 
 }
 
 func assertListIter(t testing.TB, testList *ListItem, referenceList *ListItem) {
+	t.Helper()
 	got := reflect.Indirect(reflect.ValueOf(testList.Data.Car())).Field(1)
 	want := reflect.Indirect(reflect.ValueOf(referenceList.Data.Car())).Field(1)
 	if !got.Equal(want) {

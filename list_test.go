@@ -24,7 +24,7 @@ func TestList(t *testing.T) {
 	}
 
 	list := ListItem{
-		Data: List(&first),
+		Data: NewList(&first),
 	}
 	outer := IntItem{Data: 5}
 	outerThird := SymbolItem{Data: "x"}

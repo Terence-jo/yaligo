@@ -27,12 +27,10 @@ func (i *item) Prev() Linker {
 
 func (i *item) SetNext(next Linker) {
 	i.next = next
-	return
 }
 
 func (i *item) SetPrev(prev Linker) {
 	i.prev = prev
-	return
 }
 
 type IntItem struct {
@@ -52,36 +50,34 @@ type SymbolItem struct {
 
 type ListItem struct {
 	item
-	Data *list
+	Data *List
 }
 
 // Putting Lisp-like semantics over the Linker interface defined above
-type list struct {
+type List struct {
 	head Linker
 }
 
 // head is a dummy head, an empty `item`
-func List(items ...Linker) *list {
+func NewList(items ...Linker) *List {
 	head := item{}
 	if len(items) == 0 {
-		return &list{&head}
+		return &List{&head}
 	}
-	var cur Linker = &head
+	var current Linker = &head
 	for _, item := range items {
-		cur.SetNext(item)
-		item.SetPrev(cur)
-		cur = item
+		current.SetNext(item)
+		item.SetPrev(current)
+		current = item
 	}
-	return &list{&head}
+	return &List{&head}
 }
 
-func (l *list) Car() Linker {
+func (l *List) Car() Linker {
 	return l.head.Next()
 }
 
-func (l *list) Cdr() *list {
+func (l *List) Cdr() *List {
 	next := l.Car().Next()
-	return List(next)
+	return NewList(next)
 }
-
-// func (l *List) Eval()
