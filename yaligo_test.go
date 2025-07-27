@@ -25,11 +25,11 @@ func TestAtom(t *testing.T) {
 	if err != nil {
 		t.Errorf("invalid symbol atom %v", symbolTok)
 	}
-	symbolItem, ok := symbolAtom.(*SymbolItem)
+	symbolItem, ok := symbolAtom.(*SymbolAtom)
 	if !ok {
 		t.Errorf("failed to convert %v to SymbolItem", symbolAtom)
 	}
-	desiredSymbol := SymbolItem{Data: "define"}
+	desiredSymbol := SymbolAtom{data: "define"}
 	if !reflect.DeepEqual(*symbolItem, desiredSymbol) {
 		t.Errorf("got %v, wanted %v", *symbolItem, desiredSymbol)
 	}
@@ -38,11 +38,11 @@ func TestAtom(t *testing.T) {
 	if err != nil {
 		t.Errorf("invalid int atom %v", intTok)
 	}
-	intItem, ok := intAtom.(*IntItem)
+	intItem, ok := intAtom.(*IntAtom)
 	if !ok {
 		t.Errorf("failed to convert %v to IntItem", intAtom)
 	}
-	desiredInt := IntItem{Data: 10}
+	desiredInt := IntAtom{data: 10}
 	if !reflect.DeepEqual(*intItem, desiredInt) {
 		t.Errorf("got %v, wanted %v", *intItem, desiredInt)
 	}
@@ -51,11 +51,11 @@ func TestAtom(t *testing.T) {
 	if err != nil {
 		t.Errorf("invalid float atom %v", floatTok)
 	}
-	floatItem, ok := floatAtom.(*FloatItem)
+	floatItem, ok := floatAtom.(*FloatAtom)
 	if !ok {
 		t.Errorf("failed to convert %v to FloatItem", floatAtom)
 	}
-	desiredFloat := FloatItem{Data: 5.5}
+	desiredFloat := FloatAtom{data: 5.5}
 	if !reflect.DeepEqual(*floatItem, desiredFloat) {
 		t.Errorf("got %v, wanted %v", *floatItem, desiredFloat)
 	}
@@ -71,36 +71,32 @@ func TestReadFromTokens(t *testing.T) {
 	if err != nil {
 		t.Error("failed to read tokens")
 	}
-	parsedList, ok := parsed.(*ListItem)
+	parsedList, ok := parsed.(*ListExp)
 	if !ok {
 		t.Error("did not parse to a list")
 	}
 	innerList := NewList(
-		&SymbolItem{Data: "-"},
-		&IntItem{Data: 5},
-		&IntItem{Data: 6},
+		&SymbolAtom{data: "-"},
+		&IntAtom{data: 5},
+		&IntAtom{data: 6},
 	)
-	referenceList := &ListItem{
-		Data: NewList(
-			&SymbolItem{Data: "define"},
-			&SymbolItem{Data: "x"},
-			&IntItem{Data: 10},
-			&SymbolItem{Data: "y"},
-			&ListItem{Data: innerList},
-		),
-	}
+	referenceList := NewList(
+		&SymbolAtom{data: "define"},
+		&SymbolAtom{data: "x"},
+		&IntAtom{data: 10},
+		&SymbolAtom{data: "y"},
+		innerList,
+	)
 	assertListEqual(t, parsedList, referenceList)
 }
 
 func TestEval(t *testing.T) {
-	list := &ListItem{
-		Data: NewList(
-			&SymbolItem{Data: "+"},
-			&IntItem{Data: 1},
-			&IntItem{Data: 1},
-		),
-	}
-	got, err := Eval(list)
+	list := NewList(
+		&SymbolAtom{data: "+"},
+		&IntAtom{data: 1},
+		&IntAtom{data: 1},
+	)
+	got, err := Eval(list, globalEnv)
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,35 +106,35 @@ func TestEval(t *testing.T) {
 	}
 }
 
-func assertListEqual(t testing.TB, testList *ListItem, referenceList *ListItem) {
+func assertListEqual(t testing.TB, testList *ListExp, referenceList *ListExp) {
 	t.Helper()
 	for {
-		switch testList.Data.Car().(type) {
-		case *ListItem:
-			innerTestList := testList.Data.Car().(*ListItem)
-			innerReferenceList := referenceList.Data.Car().(*ListItem)
+		switch testList.Car().(type) {
+		case *ListExp:
+			innerTestList := testList.Car().(*ListExp)
+			innerReferenceList := referenceList.Car().(*ListExp)
 			assertListEqual(t, innerTestList, innerReferenceList)
 		default:
 			assertListIter(t, testList, referenceList)
 		}
-		testNext := testList.Data.Car().Next()
-		refNext := referenceList.Data.Car().Next()
+		testNext := testList.Car().Next()
+		refNext := referenceList.Car().Next()
 		if testNext != nil {
 			if refNext == nil {
 				t.Errorf("mismatch between testList cdr and reference cdr with %v and nil", testNext)
 			}
-			testList.Data = testList.Data.Cdr()
-			referenceList.Data = referenceList.Data.Cdr()
+			testList = testList.Cdr()
+			referenceList = referenceList.Cdr()
 		} else {
 			return
 		}
 	}
 }
 
-func assertListIter(t testing.TB, testList *ListItem, referenceList *ListItem) {
+func assertListIter(t testing.TB, testList *ListExp, referenceList *ListExp) {
 	t.Helper()
-	got := reflect.Indirect(reflect.ValueOf(testList.Data.Car())).Field(1)
-	want := reflect.Indirect(reflect.ValueOf(referenceList.Data.Car())).Field(1)
+	got := reflect.Indirect(reflect.ValueOf(testList.Car())).Field(1)
+	want := reflect.Indirect(reflect.ValueOf(referenceList.Car())).Field(1)
 	if !got.Equal(want) {
 		t.Errorf("got %q, wanted %q", got, want)
 	}

@@ -6,37 +6,35 @@ import (
 )
 
 func TestList(t *testing.T) {
-	first := IntItem{
-		Data: 1,
+	first := IntAtom{
+		data: 1,
 	}
-	second := IntItem{
-		Data: 2,
+	second := IntAtom{
+		data: 2,
 	}
 	first.SetNext(&second)
 	second.SetPrev(&first)
 	firstNext := reflect.ValueOf(first.Next()).Elem().Interface()
-	fnItem, ok := firstNext.(IntItem)
+	fnItem, ok := firstNext.(IntAtom)
 	if !ok {
 		t.Error("expected IntItem")
 	}
-	if fnItem.Data != second.Data {
-		t.Errorf("got %d wanted %d", fnItem.Data, second.Data)
+	if fnItem.data != second.data {
+		t.Errorf("got %d wanted %d", fnItem.data, second.data)
 	}
 
-	list := ListItem{
-		Data: NewList(&first),
-	}
-	outer := IntItem{Data: 5}
-	outerThird := SymbolItem{Data: "x"}
-	outer.SetNext(&list)
+	list := NewList(&first)
+	outer := IntAtom{data: 5}
+	outerThird := SymbolAtom{data: "x"}
+	outer.SetNext(list)
 	list.SetPrev(&outer)
 	list.SetNext(&outerThird)
-	outerThird.SetPrev(&list)
-	retrievedList, ok := reflect.ValueOf(outer.Next()).Elem().Interface().(ListItem)
+	outerThird.SetPrev(list)
+	retrievedList, ok := reflect.ValueOf(outer.Next()).Elem().Interface().(ListExp)
 	if !ok {
 		t.Error("expected a ListItem")
 	}
-	if retrievedList.Data.Car() != &first {
-		t.Errorf("got %v wanted %v", retrievedList.Data.Car(), &first)
+	if retrievedList.Car() != &first {
+		t.Errorf("got %v wanted %v", retrievedList.Car(), &first)
 	}
 }

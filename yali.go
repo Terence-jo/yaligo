@@ -2,19 +2,87 @@ package main
 
 import (
 	"errors"
-	"math"
 	"strconv"
 	"strings"
 )
 
-func addOp(x float64, y float64) float64 {
-	return x + y
+type Env map[string]any
+
+func standardEnv() Env {
+	return Env{
+		"+": addOp,
+		"*": multOp,
+		"/": divOp,
+	}
 }
-func multOp(x float64, y float64) float64 {
-	return x * y
+
+var globalEnv = standardEnv()
+
+func addOp(args []any) (LispExp, error) {
+	if len(args) == 0 {
+		return nil, errors.New("expected arguments to +")
+	}
+	total := 0.0
+	for _, arg := range args {
+		switch val := arg.(type) {
+		case int64:
+			total += float64(val)
+		case float64:
+			total += val
+		default:
+			return nil, errors.New("expected number as arg to +")
+		}
+	}
+	ret := &FloatAtom{data: total}
+	return ret, nil
 }
-func divOp(x float64, y float64) float64 {
-	return x / y
+func multOp(args []any) (LispExp, error) {
+	if len(args) == 0 {
+		return nil, errors.New("expected arguments to *")
+	}
+	product := 1.0
+	for _, arg := range args {
+		switch val := arg.(type) {
+		case int64:
+			product *= float64(val)
+		case float64:
+			product *= val
+		default:
+			return nil, errors.New("expected number as arg to *")
+		}
+	}
+	ret := &FloatAtom{data: product}
+	return ret, nil
+}
+func divOp(args []any) (LispExp, error) {
+	if len(args) == 0 {
+		return nil, errors.New("expected arguments to *")
+	}
+	// why did I change the language here, using atom?
+	atom := args[0]
+	quotient, ok := atom.(Atom).Value().(float64)
+	if !ok {
+		return nil, errors.New("expected number atom as argument to /")
+	}
+	// scheme behaviour is to reciprocate the value if given only one argument
+	if len(args) == 1 {
+		if quotient == 0.0 {
+			return nil, errors.New("expected non-zero number atom as single argument to /")
+		}
+		return &FloatAtom{data: 1 / quotient}, nil
+	}
+	for _, arg := range args[1:] {
+		switch val := arg.(type) {
+		case int64:
+			quotient /= float64(val)
+		case float64:
+			quotient /= val
+		default:
+			return nil, errors.New("expected number as arg to *")
+		}
+	}
+	ret := &FloatAtom{data: quotient}
+	return ret, nil
 }
 
 // Eval() will evaluate the list it is passed. It will return a number
@@ -33,57 +101,76 @@ func divOp(x float64, y float64) float64 {
 //
 // See about structuring the data types to be able to approach this with actual lisp-like
 // semantics. That would be nice.
-func Eval(item Linker) (any, error) {
+func Eval(exp LispExp, env Env) (any, error) {
 	// I had forgotten that type switches could be so elegant in Go. this is nice!
-	switch item := item.(type) {
-	case *IntItem:
-		floatRet := float64(item.Data)
+	switch exp := exp.(type) {
+	case *IntAtom:
+		intVal := exp.Value().(int64)
+		floatRet := float64(intVal)
 		return floatRet, nil
-	case *FloatItem:
-		return item.Data, nil
-	case *SymbolItem:
-		op := item.Data
-		switch op {
-		case "+":
-			return reduceNums(item, addOp, 0.0)
-		case "*":
-			return reduceNums(item, multOp, 1.0)
-		case "/":
-			item := item.Next()
-			left, err := Eval(item)
+	case *FloatAtom:
+		floatRet := exp.Value().(float64)
+		return floatRet, nil
+	case *SymbolAtom:
+		// this case should just be for evaluating a symbol in the environment
+		symbol := exp.Value().(string)
+		return env[symbol], nil
+	case *ListExp:
+		// assuming this means it is a procedure call:
+		car, err := Eval(exp.Car(), env)
+		if err != nil {
+			return nil, err
+		}
+		proc, ok := car.(func([]any) (LispExp, error))
+		if !ok {
+			return nil, errors.New("expected procedure name at head of list")
+		}
+		argExps := exp.Cdr()
+		var argVals []any
+		for {
+			arg, err := Eval(argExps.Car(), env)
 			if err != nil {
 				return nil, err
 			}
-			floatLeft, ok := left.(float64)
-			if !ok {
-				return math.NaN(), errors.New("expected number as operand to /")
+			argVals = append(argVals, arg)
+			if argExps.Cdr() == nil {
+				break
 			}
-			return reduceNums(item.Next(), divOp, floatLeft)
+			argExps = argExps.Cdr()
 		}
-	case *ListItem:
-		return Eval(item.Data.Car())
+		ret, err := proc(argVals)
+		if err != nil {
+			return nil, err
+		}
+		// Returning a LispExp from procedures and evaluating the return avoids another
+		// type switch, but it does increase recursion depth momentarily...
+		val, err := Eval(ret, env)
+		if err != nil {
+			return nil, err
+		}
+		return val, nil
 	}
 	return nil, errors.New("type did not match")
 }
 
-func reduceNums(item Linker, fn func(float64, float64) float64, initVal float64) (float64, error) {
-	total := initVal
-	for item.Next() != nil {
-		right, err := Eval(item.Next())
-		if err != nil {
-			return math.NaN(), err
-		}
-		floatRight, ok := right.(float64)
-		if !ok {
-			return math.NaN(), errors.New("expected number as operand")
-		}
-		total = fn(total, floatRight)
-		item = item.Next()
-	}
-	return total, nil
-}
+// func reduceNums(item LispExp, fn func(float64, float64) float64, initVal float64) (float64, error) {
+// 	total := initVal
+// 	for item.Next() != nil {
+// 		right, err := Eval(item.Next())
+// 		if err != nil {
+// 			return math.NaN(), err
+// 		}
+// 		floatRight, ok := right.(float64)
+// 		if !ok {
+// 			return math.NaN(), errors.New("expected number as operand")
+// 		}
+// 		total = fn(total, floatRight)
+// 		item = item.Next()
+// 	}
+// 	return total, nil
+// }
 
-func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
+func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 	if len(tokens) == 0 {
 		return nil, 0, errors.New("unexpected EOF")
 	}
@@ -93,7 +180,7 @@ func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
 		// start a list and recurse to fill it
 		pos++
 		list := NewList()
-		cur := list.head
+		var cur LispExp = list
 		for tokens[pos].Class != CLOSE {
 			next, new_pos, err := readFromTokens(tokens, pos)
 			if err != nil {
@@ -103,8 +190,7 @@ func readFromTokens(tokens []Token, pos int) (Linker, int, error) {
 			cur = next
 			pos = new_pos
 		}
-		expr := ListItem{Data: list}
-		return &expr, pos, nil
+		return list, pos, nil
 	case CLOSE:
 		return nil, 0, errors.New("unexpected )")
 	}
@@ -132,7 +218,7 @@ func tokenise(chars string) []string {
 	return tokens
 }
 
-func atom(token Token) (Linker, error) {
+func atom(token Token) (LispExp, error) {
 	if token.Class == NUMBER {
 		// is this acceptable as a way to try parsing the numbers? and do I
 		// just want to make everything float?
@@ -142,9 +228,9 @@ func atom(token Token) (Linker, error) {
 			if err != nil {
 				return nil, err
 			}
-			return &FloatItem{Data: floatval}, nil
+			return &FloatAtom{data: floatval}, nil
 		}
-		return &IntItem{Data: intval}, nil
+		return &IntAtom{data: intval}, nil
 	}
-	return &SymbolItem{Data: token.Lit}, nil
+	return &SymbolAtom{data: token.Lit}, nil
 }
