@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -22,16 +23,13 @@ func addOp(args []any) (LispExp, error) {
 	if len(args) == 0 {
 		return nil, errors.New("expected arguments to +")
 	}
-	total := 0.0
-	for _, arg := range args {
-		switch val := arg.(type) {
-		case int64:
-			total += float64(val)
-		case float64:
-			total += val
-		default:
-			return nil, errors.New("expected number as arg to +")
-		}
+	accumulator := 0.0
+	add := func(x float64, y float64) float64 {
+		return x + y
+	}
+	total, err := reduceNums(args, add, accumulator)
+	if err != nil {
+		return nil, err
 	}
 	ret := &FloatAtom{data: total}
 	return ret, nil
@@ -40,16 +38,13 @@ func multOp(args []any) (LispExp, error) {
 	if len(args) == 0 {
 		return nil, errors.New("expected arguments to *")
 	}
-	product := 1.0
-	for _, arg := range args {
-		switch val := arg.(type) {
-		case int64:
-			product *= float64(val)
-		case float64:
-			product *= val
-		default:
-			return nil, errors.New("expected number as arg to *")
-		}
+	accumulator := 1.0
+	mult := func(x float64, y float64) float64 {
+		return x * y
+	}
+	product, err := reduceNums(args, mult, accumulator)
+	if err != nil {
+		return nil, err
 	}
 	ret := &FloatAtom{data: product}
 	return ret, nil
@@ -58,31 +53,52 @@ func divOp(args []any) (LispExp, error) {
 	if len(args) == 0 {
 		return nil, errors.New("expected arguments to *")
 	}
-	// why did I change the language here, using atom?
-	atom := args[0]
-	quotient, ok := atom.(Atom).Value().(float64)
-	if !ok {
-		return nil, errors.New("expected number atom as argument to /")
+	// scheme behaviour is to return the inverse if given only one arg
+	var accumulator float64
+	div := func(x, y float64) float64 {
+		return x / y
 	}
-	// scheme behaviour is to reciprocate the value if given only one argument
 	if len(args) == 1 {
-		if quotient == 0.0 {
-			return nil, errors.New("expected non-zero number atom as single argument to /")
+		accumulator = 1.0
+		inverse, err := reduceNums(args, div, accumulator)
+		if err != nil {
+			return nil, err
 		}
-		return &FloatAtom{data: 1 / quotient}, nil
+		return &FloatAtom{data: inverse}, nil
 	}
-	for _, arg := range args[1:] {
-		switch val := arg.(type) {
-		case int64:
-			quotient /= float64(val)
-		case float64:
-			quotient /= val
-		default:
-			return nil, errors.New("expected number as arg to *")
-		}
+	//
+	accumulator, err := numToFloat(args[0])
+	if err != nil {
+		return nil, err
 	}
-	ret := &FloatAtom{data: quotient}
+	result, err := reduceNums(args[1:], div, accumulator)
+	if err != nil {
+		return nil, err
+	}
+	ret := &FloatAtom{data: result}
 	return ret, nil
+}
+
+func reduceNums(nums []any, fn func(float64, float64) float64, accumulator float64) (float64, error) {
+	for _, num := range nums {
+		floatVal, err := numToFloat(num)
+		if err != nil {
+			return math.NaN(), err
+		}
+		accumulator = fn(accumulator, floatVal)
+	}
+	return accumulator, nil
+}
+
+func numToFloat(num any) (float64, error) {
+	switch val := num.(type) {
+	case int64:
+		return float64(val), nil
+	case float64:
+		return val, nil
+	default:
+		return math.NaN(), errors.New("expected number as operand")
+	}
 }
 
 // Eval() will evaluate the list it is passed. It will return a number
@@ -153,23 +169,6 @@ func Eval(exp LispExp, env Env) (any, error) {
 	return nil, errors.New("type did not match")
 }
 
-// func reduceNums(item LispExp, fn func(float64, float64) float64, initVal float64) (float64, error) {
-// 	total := initVal
-// 	for item.Next() != nil {
-// 		right, err := Eval(item.Next())
-// 		if err != nil {
-// 			return math.NaN(), err
-// 		}
-// 		floatRight, ok := right.(float64)
-// 		if !ok {
-// 			return math.NaN(), errors.New("expected number as operand")
-// 		}
-// 		total = fn(total, floatRight)
-// 		item = item.Next()
-// 	}
-// 	return total, nil
-// }
-
 func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 	if len(tokens) == 0 {
 		return nil, 0, errors.New("unexpected EOF")
@@ -203,11 +202,11 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 }
 
 func tokenise(chars string) []string {
-	chars = strings.Replace(
-		chars, "(", " ( ", -1,
+	chars = strings.ReplaceAll(
+		chars, "(", " ( ",
 	)
-	chars = strings.Replace(
-		chars, ")", " ) ", -1,
+	chars = strings.ReplaceAll(
+		chars, ")", " ) ",
 	)
 	tokens := []string{}
 	for _, token := range strings.Split(chars, " ") {
