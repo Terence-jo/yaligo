@@ -13,7 +13,6 @@ func TestList(t *testing.T) {
 		data: 2,
 	}
 	first.SetNext(&second)
-	second.SetPrev(&first)
 	firstNext := reflect.ValueOf(first.Next()).Elem().Interface()
 	fnItem, ok := firstNext.(IntAtom)
 	if !ok {
@@ -27,10 +26,8 @@ func TestList(t *testing.T) {
 	outer := IntAtom{data: 5}
 	outerThird := SymbolAtom{data: "x"}
 	outer.SetNext(list)
-	list.SetPrev(&outer)
-	list.SetNext(&outerThird)
-	outerThird.SetPrev(list)
-	retrievedList, ok := reflect.ValueOf(outer.Next()).Elem().Interface().(ListExp)
+	list.Cdr().SetNext(&outerThird)
+	retrievedList, ok := outer.Next().(*ListExp)
 	if !ok {
 		t.Error("expected a ListItem")
 	}

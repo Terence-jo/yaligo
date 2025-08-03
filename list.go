@@ -7,30 +7,19 @@ package main
 // consider renaming, and see whether back links are really necessary
 type LispExp interface {
 	Next() LispExp
-	Prev() LispExp
 	SetNext(LispExp)
-	SetPrev(LispExp)
 }
 
 type item struct {
 	next LispExp
-	prev LispExp
 }
 
 func (i *item) Next() LispExp {
 	return i.next
 }
 
-func (i *item) Prev() LispExp {
-	return i.prev
-}
-
 func (i *item) SetNext(next LispExp) {
 	i.next = next
-}
-
-func (i *item) SetPrev(prev LispExp) {
-	i.prev = prev
 }
 
 type Atom interface {
@@ -76,7 +65,6 @@ func NewList(items ...LispExp) *ListExp {
 	var current LispExp = &exp
 	for _, item := range items {
 		current.SetNext(item)
-		item.SetPrev(current)
 		current = item
 	}
 	return &exp
