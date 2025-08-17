@@ -26,12 +26,12 @@ func TestList(t *testing.T) {
 	outer := IntAtom{data: 5}
 	outerThird := SymbolAtom{data: "x"}
 	outer.SetNext(list)
-	list.Cdr().SetNext(&outerThird)
+	NewList(list.Next()).SetNext(&outerThird)
 	retrievedList, ok := outer.Next().(*ListExp)
 	if !ok {
 		t.Error("expected a ListItem")
 	}
-	if retrievedList.Car() != &first {
-		t.Errorf("got %v wanted %v", retrievedList.Car(), &first)
+	if retrievedList.Next() != &first {
+		t.Errorf("got %v wanted %v", retrievedList.Next(), &first)
 	}
 }

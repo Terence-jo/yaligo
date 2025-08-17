@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"math"
+	"reflect"
 	"strconv"
 	"strings"
 )
@@ -11,13 +12,26 @@ type Env map[string]any
 
 func standardEnv() Env {
 	return Env{
-		"+": addOp,
-		"*": multOp,
-		"/": divOp,
+		"#t":  true,
+		"#f":  false,
+		"eq?": equalOp,
+		"+":   addOp,
+		"*":   multOp,
+		"/":   divOp,
 	}
 }
 
 var globalEnv = standardEnv()
+
+func equalOp(args []any) (LispExp, error) {
+	if len(args) != 2 {
+		return nil, errors.New("expected to arguments to equal?")
+	}
+	if reflect.DeepEqual(args[0], args[1]) {
+		return &SymbolAtom{data: "#t"}, nil
+	}
+	return &SymbolAtom{data: "#f"}, nil
+}
 
 func addOp(args []any) (LispExp, error) {
 	if len(args) == 0 {
@@ -101,6 +115,11 @@ func numToFloat(num any) (float64, error) {
 	}
 }
 
+func popHead(exp *ListExp) (LispExp, *ListExp) {
+	ret := exp.Next()
+	return ret, NewList(exp.Next())
+}
+
 // Eval() will evaluate the list it is passed. It will return a number
 // at this stage, but in the future will need to be flexible enough to
 // return a number, string, or list. It will just need to return
@@ -132,40 +151,71 @@ func Eval(exp LispExp, env Env) (any, error) {
 		symbol := exp.Value().(string)
 		return env[symbol], nil
 	case *ListExp:
-		// assuming this means it is a procedure call:
-		car, err := Eval(exp.Car(), env)
-		if err != nil {
-			return nil, err
-		}
-		proc, ok := car.(func([]any) (LispExp, error))
+		// unquoted list, this means it is a syntactic form or procedure call:
+		car, exp := popHead(exp)
+		symbol, ok := car.(*SymbolAtom)
 		if !ok {
-			return nil, errors.New("expected procedure name at head of list")
+			return nil, errors.New("expected symbol at head of unquoted list")
 		}
-		argExps := exp.Cdr()
-		var argVals []any
-		for {
-			arg, err := Eval(argExps.Car(), env)
+		switch symbol.data {
+		case "if":
+			// chucking this here to test as a helper.
+			test, exp := popHead(exp)
+			conseq, exp := popHead(exp)
+			alt, exp := popHead(exp)
+			if exp.Next() != nil {
+				return nil, errors.New("too many arguments to 'if', expected test, conseq, alt")
+			}
+			testRes, err := Eval(test, env)
 			if err != nil {
 				return nil, err
 			}
-			argVals = append(argVals, arg)
-			if argExps.Cdr() == nil {
-				break
+			resBool, ok := testRes.(bool)
+			if !ok {
+				return nil, errors.New("expected test of 'if' to evaluate to a boolean")
 			}
-			argExps = argExps.Cdr()
+			if resBool {
+				return Eval(conseq, env)
+			}
+			return Eval(alt, env)
+		case "cond":
+		case "define":
+
+		default:
+			procExp, err := Eval(symbol, env)
+			if err != nil {
+				return nil, err
+			}
+			proc, ok := procExp.(func([]any) (LispExp, error))
+			if !ok {
+				return nil, errors.New("expected procedure name at head of list")
+			}
+			var argVals []any
+			for {
+				arg, err := Eval(exp.Next(), env)
+				if err != nil {
+					return nil, err
+				}
+				argVals = append(argVals, arg)
+				if exp.Next() == nil {
+					break
+				}
+				exp = NewList(exp.Next())
+			}
+			ret, err := proc(argVals)
+			if err != nil {
+				return nil, err
+			}
+			// Returning a LispExp from procedures and evaluating the return avoids another
+			// type switch, but it does increase recursion depth momentarily...
+			val, err := Eval(ret, env)
+			if err != nil {
+				return nil, err
+			}
+			return val, nil
 		}
-		ret, err := proc(argVals)
-		if err != nil {
-			return nil, err
-		}
-		// Returning a LispExp from procedures and evaluating the return avoids another
-		// type switch, but it does increase recursion depth momentarily...
-		val, err := Eval(ret, env)
-		if err != nil {
-			return nil, err
-		}
-		return val, nil
 	}
+
 	return nil, errors.New("type did not match")
 }
 

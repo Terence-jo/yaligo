@@ -104,28 +104,47 @@ func TestEval(t *testing.T) {
 	if got != want {
 		t.Errorf("got %v, wanted %v", got, want)
 	}
+	eqProc := NewList(
+		&SymbolAtom{data: "equal?"},
+		&IntAtom{data: 1},
+		&IntAtom{data: 1},
+	)
+	ifList := NewList(
+		&SymbolAtom{data: "if"},
+		eqProc,
+		&FloatAtom{data: 5.0},
+		&FloatAtom{data: 10.0},
+	)
+	got, err = Eval(ifList, globalEnv)
+	if err != nil {
+		t.Error(err)
+	}
+	want = 5.0
+	if got != want {
+		t.Errorf("got %f, wanted %f", got, want)
+	}
 	// test some failure cases
 }
 
 func assertListEqual(t testing.TB, testList *ListExp, referenceList *ListExp) {
 	t.Helper()
 	for {
-		switch testList.Car().(type) {
+		switch testList.Next().(type) {
 		case *ListExp:
-			innerTestList := testList.Car().(*ListExp)
-			innerReferenceList := referenceList.Car().(*ListExp)
+			innerTestList := testList.Next().(*ListExp)
+			innerReferenceList := referenceList.Next().(*ListExp)
 			assertListEqual(t, innerTestList, innerReferenceList)
 		default:
 			assertListIter(t, testList, referenceList)
 		}
-		testNext := testList.Car().Next()
-		refNext := referenceList.Car().Next()
+		testNext := testList.Next().Next()
+		refNext := referenceList.Next().Next()
 		if testNext != nil {
 			if refNext == nil {
 				t.Errorf("mismatch between testList cdr and reference cdr with %v and nil", testNext)
 			}
-			testList = testList.Cdr()
-			referenceList = referenceList.Cdr()
+			testList = NewList(testList.Next())
+			referenceList = NewList(referenceList.Next())
 		} else {
 			return
 		}
@@ -134,8 +153,8 @@ func assertListEqual(t testing.TB, testList *ListExp, referenceList *ListExp) {
 
 func assertListIter(t testing.TB, testList *ListExp, referenceList *ListExp) {
 	t.Helper()
-	got := reflect.Indirect(reflect.ValueOf(testList.Car())).Field(1)
-	want := reflect.Indirect(reflect.ValueOf(referenceList.Car())).Field(1)
+	got := reflect.Indirect(reflect.ValueOf(testList.Next())).Field(1)
+	want := reflect.Indirect(reflect.ValueOf(referenceList.Next())).Field(1)
 	if !got.Equal(want) {
 		t.Errorf("got %q, wanted %q", got, want)
 	}

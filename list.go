@@ -4,7 +4,6 @@ package main
 // is the most aligned with Lisp semantics. I do wonder how a slice  of arbitrary types
 // might work though.
 
-// consider renaming, and see whether back links are really necessary
 type LispExp interface {
 	Next() LispExp
 	SetNext(LispExp)
@@ -53,31 +52,24 @@ func (s *SymbolAtom) Value() any {
 	return s.data
 }
 
-type ListExp struct {
+type List struct {
 	item
 }
 
+type ListExp struct {
+	item
+	data List
+}
+
 func NewList(items ...LispExp) *ListExp {
-	exp := ListExp{item{}}
+	exp := ListExp{data: List{}}
 	if len(items) == 0 {
 		return &exp
 	}
-	var current LispExp = &exp
+	var current LispExp = &exp.data
 	for _, item := range items {
 		current.SetNext(item)
 		current = item
 	}
 	return &exp
-}
-
-func (l *ListExp) Car() LispExp {
-	return l.Next()
-}
-
-func (l *ListExp) Cdr() *ListExp {
-	head := l.Car()
-	if head.Next() == nil {
-		return nil
-	}
-	return NewList(head.Next())
 }
