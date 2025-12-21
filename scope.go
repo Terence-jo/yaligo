@@ -16,19 +16,29 @@ func NewEnv(params []string, args []any, outer *Env) *Env {
 	}
 }
 
-func (e *Env) Define(name string, val any) {
+func (e *Env) SetVar(name string, val any) {
 	e.local[name] = val
 }
 
 // find the innermost Env in which varName appears.
-func (e *Env) Find(varName string) any {
+func (e *Env) FindEnvWith(varName string) *Env {
 	for key := range e.local {
 		if key == varName {
-			return e.local[key]
+			return e
 		}
 	}
-	e.outer.Find(varName)
-	return nil
+	if e.outer == nil {
+		return nil
+	}
+	return e.outer.FindEnvWith(varName)
+}
+
+func (e *Env) FindVar(varName string) any {
+	val, ok := e.local[varName]
+	if !ok {
+		return nil
+	}
+	return val
 }
 
 func standardEnv() *Env {
@@ -43,10 +53,10 @@ func standardEnv() *Env {
 	args := []any{
 		true,
 		false,
-		equalOp,
-		addOp,
-		multOp,
-		divOp,
+		&BuiltIn{equalOp},
+		&BuiltIn{addOp},
+		&BuiltIn{multOp},
+		&BuiltIn{divOp},
 	}
 	return NewEnv(params, args, nil)
 }

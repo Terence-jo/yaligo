@@ -109,6 +109,11 @@ func TestEval(t *testing.T) {
 		&IntAtom{Data: 1},
 		&IntAtom{Data: 1},
 	)
+	neqProc := NewList(
+		&SymbolAtom{Data: "eq?"},
+		&IntAtom{Data: 0},
+		&IntAtom{Data: 1},
+	)
 	ifList := NewList(
 		&SymbolAtom{Data: "if"},
 		eqProc,
@@ -120,6 +125,20 @@ func TestEval(t *testing.T) {
 		t.Error(err)
 	}
 	want = 5.0
+	if got != want {
+		t.Errorf("got %f, wanted %f", got, want)
+	}
+	ifList = NewList(
+		&SymbolAtom{Data: "if"},
+		neqProc,
+		&FloatAtom{Data: 5.0},
+		&FloatAtom{Data: 10.0},
+	)
+	got, err = Eval(ifList, globalEnv)
+	if err != nil {
+		t.Error(err)
+	}
+	want = 10.0
 	if got != want {
 		t.Errorf("got %f, wanted %f", got, want)
 	}
