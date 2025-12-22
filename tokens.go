@@ -39,7 +39,6 @@ const (
 	IF
 )
 
-// Create an array of strings, explicitly assigning items to each index
 var tokens = [...]string{
 	OPEN:   "(",
 	CLOSE:  ")",

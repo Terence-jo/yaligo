@@ -2,217 +2,117 @@ package main
 
 import (
 	"errors"
-	"math"
-	"reflect"
 	"strconv"
 	"strings"
 )
 
-type Env map[string]any
-
-func standardEnv() Env {
-	return Env{
-		"#t":  true,
-		"#f":  false,
-		"eq?": equalOp,
-		"+":   addOp,
-		"*":   multOp,
-		"/":   divOp,
-	}
-}
-
 var globalEnv = standardEnv()
 
-func equalOp(args []any) (LispExp, error) {
-	if len(args) != 2 {
-		return nil, errors.New("expected to arguments to equal?")
-	}
-	if reflect.DeepEqual(args[0], args[1]) {
-		return &SymbolAtom{data: "#t"}, nil
-	}
-	return &SymbolAtom{data: "#f"}, nil
-}
-
-func addOp(args []any) (LispExp, error) {
-	if len(args) == 0 {
-		return nil, errors.New("expected arguments to +")
-	}
-	accumulator := 0.0
-	add := func(x float64, y float64) float64 {
-		return x + y
-	}
-	total, err := reduceNums(args, add, accumulator)
-	if err != nil {
-		return nil, err
-	}
-	ret := &FloatAtom{data: total}
-	return ret, nil
-}
-func multOp(args []any) (LispExp, error) {
-	if len(args) == 0 {
-		return nil, errors.New("expected arguments to *")
-	}
-	accumulator := 1.0
-	mult := func(x float64, y float64) float64 {
-		return x * y
-	}
-	product, err := reduceNums(args, mult, accumulator)
-	if err != nil {
-		return nil, err
-	}
-	ret := &FloatAtom{data: product}
-	return ret, nil
-}
-func divOp(args []any) (LispExp, error) {
-	if len(args) == 0 {
-		return nil, errors.New("expected arguments to *")
-	}
-	// scheme behaviour is to return the inverse if given only one arg
-	var accumulator float64
-	div := func(x, y float64) float64 {
-		return x / y
-	}
-	if len(args) == 1 {
-		accumulator = 1.0
-		inverse, err := reduceNums(args, div, accumulator)
-		if err != nil {
-			return nil, err
-		}
-		return &FloatAtom{data: inverse}, nil
-	}
-	//
-	accumulator, err := numToFloat(args[0])
-	if err != nil {
-		return nil, err
-	}
-	result, err := reduceNums(args[1:], div, accumulator)
-	if err != nil {
-		return nil, err
-	}
-	ret := &FloatAtom{data: result}
-	return ret, nil
-}
-
-func reduceNums(nums []any, fn func(float64, float64) float64, accumulator float64) (float64, error) {
-	for _, num := range nums {
-		floatVal, err := numToFloat(num)
-		if err != nil {
-			return math.NaN(), err
-		}
-		accumulator = fn(accumulator, floatVal)
-	}
-	return accumulator, nil
-}
-
-func numToFloat(num any) (float64, error) {
-	switch val := num.(type) {
-	case int64:
-		return float64(val), nil
-	case float64:
-		return val, nil
-	default:
-		return math.NaN(), errors.New("expected number as operand")
-	}
-}
-
-func popHead(exp *ListExp) (LispExp, *ListExp) {
-	ret := exp.Next()
-	return ret, NewList(exp.Next())
-}
-
-// Eval() will evaluate the list it is passed. It will return a number
-// at this stage, but in the future will need to be flexible enough to
-// return a number, string, or list. It will just need to return
-// any I think. It may have evaluation errors.
-//
-// Post-calculator considerations:
-// Where will the environment come from? If I model the environment as
-// a simple map, what are the drawbacks? I think the main one is that
-// it could be hard to extricate the values from an inner function from the environment
-// for an outer function. There are ways around this though, the first to come
-// to mind is to model the environment as a map of maps, but perhaps a tree
-// of maps would be more appropriate. That would allow clearer definition
-// right?
-//
-// See about structuring the data types to be able to approach this with actual lisp-like
-// semantics. That would be nice.
-func Eval(exp LispExp, env Env) (any, error) {
-	// I had forgotten that type switches could be so elegant in Go. this is nice!
+func Eval(exp LispExp, env *Env) (LispExp, error) {
 	switch exp := exp.(type) {
-	case *IntAtom:
-		intVal := exp.Value().(int64)
-		floatRet := float64(intVal)
-		return floatRet, nil
-	case *FloatAtom:
-		floatRet := exp.Value().(float64)
-		return floatRet, nil
+	// case *IntAtom:
+	// 	intVal := exp.Data
+	// 	floatVal := float64(intVal)
+	// 	return &NumberAtom{floatVal}, nil
+	case *NumberAtom:
+		return exp, nil
 	case *SymbolAtom:
-		// this case should just be for evaluating a symbol in the environment
-		symbol := exp.Value().(string)
-		return env[symbol], nil
-	case *ListExp:
+		symbol := exp.Data
+		return env.FindVar(symbol), nil
+	case *ConsCell:
+		car := exp.Car
+		exp = exp.Cdr
 		// unquoted list, this means it is a syntactic form or procedure call:
-		car, exp := popHead(exp)
 		symbol, ok := car.(*SymbolAtom)
 		if !ok {
 			return nil, errors.New("expected symbol at head of unquoted list")
 		}
-		switch symbol.data {
+		switch symbol.Data {
 		case "if":
-			// chucking this here to test as a helper.
-			test, exp := popHead(exp)
-			conseq, exp := popHead(exp)
-			alt, exp := popHead(exp)
-			if exp.Next() != nil {
+			test := exp.Car
+			conseq := exp.Cdr.Car
+			alt := exp.Cdr.Cdr.Car
+			exp := exp.Cdr.Cdr.Cdr
+			if exp != nil {
 				return nil, errors.New("too many arguments to 'if', expected test, conseq, alt")
 			}
 			testRes, err := Eval(test, env)
 			if err != nil {
 				return nil, err
 			}
-			resBool, ok := testRes.(bool)
+			resSym, ok := testRes.(*SymbolAtom)
 			if !ok {
 				return nil, errors.New("expected test of 'if' to evaluate to a boolean")
 			}
-			if resBool {
+			if resSym.Data == TRUE {
 				return Eval(conseq, env)
+			}
+			if resSym.Data != FALSE {
+				return nil, errors.New("expected test of 'if' to evaluate to a boolean")
 			}
 			return Eval(alt, env)
 		case "cond":
+			for exp != nil {
+				clause, ok := exp.Car.(*ConsCell)
+				if !ok {
+					return nil, errors.New("expect cond clauses to be cons cells")
+				}
+				if clause.Car == nil || clause.Cdr == nil {
+					return nil, errors.New("cond clauses must have two elements")
+				}
+				testRes, err := Eval(clause.Car, env)
+				if err != nil {
+					return nil, err
+				}
+				resSym, ok := testRes.(*SymbolAtom)
+				if !ok {
+					return nil, errors.New("expected test to evaluate to boolean literal")
+				}
+				if resSym.Data == TRUE {
+					return Eval(clause.Cdr.Car, env)
+				}
+				if resSym.Data != FALSE {
+					return nil, errors.New("expected test to evaluate to boolean literal")
+				}
+				exp = exp.Cdr
+			}
+			return &ConsCell{nil, nil}, nil
 		case "define":
-
+			varName, ok := exp.Car.(*SymbolAtom)
+			if !ok {
+				return nil, errors.New("expected a symbol as first arg to 'define'")
+			}
+			expArg := exp.Cdr.Car
+			env.SetVar(varName.Data, expArg)
+			return expArg, nil
+		case "set!":
+			varName, ok := exp.Car.(*SymbolAtom)
+			if !ok {
+				return nil, errors.New("expected a symbol as first arg to 'define'")
+			}
+			expArg := exp.Cdr.Car
+			envWithVar := env.FindEnvWith(varName.Data)
+			if envWithVar == nil {
+				return nil, errors.New("expected target of 'set' to exist")
+			}
+			envWithVar.SetVar(varName.Data, expArg)
+			return expArg, nil
+		case "lambda":
+			// this will involve creating a procedure with the params, body, and env.
 		default:
 			procExp, err := Eval(symbol, env)
 			if err != nil {
 				return nil, err
 			}
-			proc, ok := procExp.(func([]any) (LispExp, error))
+			proc, ok := procExp.(Callable)
 			if !ok {
 				return nil, errors.New("expected procedure name at head of list")
 			}
-			var argVals []any
-			for {
-				arg, err := Eval(exp.Next(), env)
-				if err != nil {
-					return nil, err
-				}
-				argVals = append(argVals, arg)
-				if exp.Next() == nil {
-					break
-				}
-				exp = NewList(exp.Next())
-			}
-			ret, err := proc(argVals)
+			ret, err := proc.Call(exp)
 			if err != nil {
 				return nil, err
 			}
-			// Returning a LispExp from procedures and evaluating the return avoids another
-			// type switch, but it does increase recursion depth momentarily...
-			val, err := Eval(ret, env)
-			if err != nil {
-				return nil, err
-			}
-			return val, nil
+			return ret, nil
 		}
 	}
 
@@ -226,20 +126,35 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 	token := tokens[pos]
 	switch token.Class {
 	case OPEN:
-		// start a list and recurse to fill it
 		pos++
-		list := NewList()
-		var cur LispExp = list
+		if len(tokens) <= pos {
+			return nil, 0, errors.New("unclosed list: unexpected EOF")
+		}
+		// handle empty list '()'
+		if tokens[pos].Class == CLOSE {
+			return &ConsCell{nil, nil}, pos + 1, nil
+		}
+
+		// read the first element to create the head of the list.
+		car, newPos, err := readFromTokens(tokens, pos)
+		if err != nil {
+			return nil, 0, err
+		}
+		head := Cons(car, nil)
+		tail := head
+		pos = newPos
+
 		for tokens[pos].Class != CLOSE {
-			next, new_pos, err := readFromTokens(tokens, pos)
+			car, new_pos, err := readFromTokens(tokens, pos)
 			if err != nil {
 				return nil, 0, err
 			}
-			cur.SetNext(next)
-			cur = next
+			newCell := Cons(car, nil)
+			tail.Cdr = newCell
+			tail = newCell
 			pos = new_pos
 		}
-		return list, pos, nil
+		return head, pos, nil
 	case CLOSE:
 		return nil, 0, errors.New("unexpected )")
 	}
@@ -269,17 +184,15 @@ func tokenise(chars string) []string {
 
 func atom(token Token) (LispExp, error) {
 	if token.Class == NUMBER {
-		// is this acceptable as a way to try parsing the numbers? and do I
-		// just want to make everything float?
 		intval, err := strconv.ParseInt(token.Lit, 10, 64)
 		if err != nil {
 			floatval, err := strconv.ParseFloat(token.Lit, 64)
 			if err != nil {
 				return nil, err
 			}
-			return &FloatAtom{data: floatval}, nil
+			return &NumberAtom{Data: floatval}, nil
 		}
-		return &IntAtom{data: intval}, nil
+		return &NumberAtom{Data: float64(intval)}, nil
 	}
-	return &SymbolAtom{data: token.Lit}, nil
+	return &SymbolAtom{Data: token.Lit}, nil
 }
