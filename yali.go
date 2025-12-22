@@ -8,15 +8,14 @@ import (
 
 var globalEnv = standardEnv()
 
-func Eval(exp LispExp, env *Env) (any, error) {
+func Eval(exp LispExp, env *Env) (LispExp, error) {
 	switch exp := exp.(type) {
-	case *IntAtom:
-		intVal := exp.Data
-		floatRet := float64(intVal)
-		return floatRet, nil
-	case *FloatAtom:
-		floatRet := exp.Data
-		return floatRet, nil
+	// case *IntAtom:
+	// 	intVal := exp.Data
+	// 	floatVal := float64(intVal)
+	// 	return &NumberAtom{floatVal}, nil
+	case *NumberAtom:
+		return exp, nil
 	case *SymbolAtom:
 		symbol := exp.Data
 		return env.FindVar(symbol), nil
@@ -41,38 +40,65 @@ func Eval(exp LispExp, env *Env) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			resBool, ok := testRes.(bool)
+			resSym, ok := testRes.(*SymbolAtom)
 			if !ok {
 				return nil, errors.New("expected test of 'if' to evaluate to a boolean")
 			}
-			if resBool {
+			if resSym.Data == TRUE {
 				return Eval(conseq, env)
+			}
+			if resSym.Data != FALSE {
+				return nil, errors.New("expected test of 'if' to evaluate to a boolean")
 			}
 			return Eval(alt, env)
 		case "cond":
+			for exp != nil {
+				clause, ok := exp.Car.(*ConsCell)
+				if !ok {
+					return nil, errors.New("expect cond clauses to be cons cells")
+				}
+				if clause.Car == nil || clause.Cdr == nil {
+					return nil, errors.New("cond clauses must have two elements")
+				}
+				testRes, err := Eval(clause.Car, env)
+				if err != nil {
+					return nil, err
+				}
+				resSym, ok := testRes.(*SymbolAtom)
+				if !ok {
+					return nil, errors.New("expected test to evaluate to boolean literal")
+				}
+				if resSym.Data == TRUE {
+					return Eval(clause.Cdr.Car, env)
+				}
+				if resSym.Data != FALSE {
+					return nil, errors.New("expected test to evaluate to boolean literal")
+				}
+				exp = exp.Cdr
+			}
+			return &ConsCell{nil, nil}, nil
 		case "define":
-			symbol, ok := exp.Car.(*SymbolAtom)
+			varName, ok := exp.Car.(*SymbolAtom)
 			if !ok {
 				return nil, errors.New("expected a symbol as first arg to 'define'")
 			}
 			expArg := exp.Cdr.Car
-			env.SetVar(symbol.Data, expArg)
-			return nil, nil
+			env.SetVar(varName.Data, expArg)
+			return expArg, nil
 		case "set!":
-			symbol, ok := exp.Car.(*SymbolAtom)
+			varName, ok := exp.Car.(*SymbolAtom)
 			if !ok {
 				return nil, errors.New("expected a symbol as first arg to 'define'")
 			}
 			expArg := exp.Cdr.Car
-			envWithVar := env.FindEnvWith(symbol.Data)
+			envWithVar := env.FindEnvWith(varName.Data)
 			if envWithVar == nil {
 				return nil, errors.New("expected target of 'set' to exist")
 			}
-			envWithVar.SetVar(symbol.Data, expArg)
-			return nil, nil
+			envWithVar.SetVar(varName.Data, expArg)
+			return expArg, nil
 		case "lambda":
-			// this will involve getting the params as slice, and creating a procedure
-			// with the params, body, and env.
+			// this will involve creating a procedure with the params, body, and env.
 		default:
 			procExp, err := Eval(symbol, env)
 			if err != nil {
@@ -82,19 +108,7 @@ func Eval(exp LispExp, env *Env) (any, error) {
 			if !ok {
 				return nil, errors.New("expected procedure name at head of list")
 			}
-			var argVals []any
-			for {
-				arg, err := Eval(exp.Car, env)
-				if err != nil {
-					return nil, err
-				}
-				argVals = append(argVals, arg)
-				if exp.Cdr == nil {
-					break
-				}
-				exp = exp.Cdr
-			}
-			ret, err := proc.Call(argVals)
+			ret, err := proc.Call(exp)
 			if err != nil {
 				return nil, err
 			}
@@ -118,7 +132,7 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 		}
 		// handle empty list '()'
 		if tokens[pos].Class == CLOSE {
-			return nil, pos + 1, nil
+			return &ConsCell{nil, nil}, pos + 1, nil
 		}
 
 		// read the first element to create the head of the list.
@@ -176,9 +190,9 @@ func atom(token Token) (LispExp, error) {
 			if err != nil {
 				return nil, err
 			}
-			return &FloatAtom{Data: floatval}, nil
+			return &NumberAtom{Data: floatval}, nil
 		}
-		return &IntAtom{Data: intval}, nil
+		return &NumberAtom{Data: float64(intval)}, nil
 	}
 	return &SymbolAtom{Data: token.Lit}, nil
 }

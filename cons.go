@@ -11,17 +11,18 @@ type ConsCell struct {
 
 func (c *ConsCell) isLispExp() {}
 
-type IntAtom struct {
-	Data int64
-}
+//
+// type IntAtom struct {
+// 	Data int64
+// }
+//
+// func (i *IntAtom) isLispExp() {}
 
-func (i *IntAtom) isLispExp() {}
-
-type FloatAtom struct {
+type NumberAtom struct {
 	Data float64
 }
 
-func (f *FloatAtom) isLispExp() {}
+func (f *NumberAtom) isLispExp() {}
 
 type SymbolAtom struct {
 	Data string

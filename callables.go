@@ -8,7 +8,7 @@ import (
 
 type Callable interface {
 	LispExp
-	Call(args []any) (any, error)
+	Call(args *ConsCell) (LispExp, error)
 }
 
 type Procedure struct {
@@ -19,33 +19,36 @@ type Procedure struct {
 
 func (p *Procedure) isLispExp() {}
 
-func (p *Procedure) Call(args []any) (any, error) {
-	env := NewEnv(p.params, args, p.env)
+func (p *Procedure) Call(args *ConsCell) (LispExp, error) {
+	env, err := NewEnv(p.params, args, p.env)
+	if err != nil {
+		return nil, err
+	}
 	return Eval(p.body, env)
 }
 
 type BuiltIn struct {
-	body func(args []any) (any, error)
+	body func(args *ConsCell) (LispExp, error)
 }
 
 func (b *BuiltIn) isLispExp() {}
 
-func (b *BuiltIn) Call(args []any) (any, error) {
+func (b *BuiltIn) Call(args *ConsCell) (LispExp, error) {
 	return b.body(args)
 }
 
-func equalOp(args []any) (any, error) {
-	if len(args) != 2 {
-		return nil, errors.New("expected to arguments to equal?")
+func equalOp(args *ConsCell) (LispExp, error) {
+	if args.Cdr == nil || args.Cdr.Cdr != nil {
+		return nil, errors.New("expected two arguments to equal?")
 	}
-	if reflect.DeepEqual(args[0], args[1]) {
-		return true, nil
+	if reflect.DeepEqual(args.Car, args.Cdr.Car) {
+		return &SymbolAtom{TRUE}, nil
 	}
-	return false, nil
+	return &SymbolAtom{FALSE}, nil
 }
 
-func addOp(args []any) (any, error) {
-	if len(args) == 0 {
+func addOp(args *ConsCell) (LispExp, error) {
+	if args.Car == nil {
 		return nil, errors.New("expected arguments to +")
 	}
 	accumulator := 0.0
@@ -56,10 +59,10 @@ func addOp(args []any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return total, nil
+	return &NumberAtom{total}, nil
 }
-func multOp(args []any) (any, error) {
-	if len(args) == 0 {
+func multOp(args *ConsCell) (LispExp, error) {
+	if args.Car == nil {
 		return nil, errors.New("expected arguments to *")
 	}
 	accumulator := 1.0
@@ -70,10 +73,10 @@ func multOp(args []any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return product, nil
+	return &NumberAtom{product}, nil
 }
-func divOp(args []any) (any, error) {
-	if len(args) == 0 {
+func divOp(args *ConsCell) (LispExp, error) {
+	if args.Car == nil {
 		return nil, errors.New("expected arguments to *")
 	}
 	// scheme behaviour is to return the inverse if given only one arg
@@ -81,34 +84,39 @@ func divOp(args []any) (any, error) {
 	div := func(x, y float64) float64 {
 		return x / y
 	}
-	if len(args) == 1 {
+	if args.Cdr == nil {
 		accumulator = 1.0
 		inverse, err := reduceNums(args, div, accumulator)
 		if err != nil {
 			return nil, err
 		}
-		return &FloatAtom{Data: inverse}, nil
+		return &NumberAtom{Data: inverse}, nil
 	}
-	//
-	accumulator, err := numToFloat(args[0])
+	accumulator, err := numToFloat(args.Car)
 	if err != nil {
 		return nil, err
 	}
-	result, err := reduceNums(args[1:], div, accumulator)
+	result, err := reduceNums(args.Cdr, div, accumulator)
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	return &NumberAtom{result}, nil
 }
 
-func reduceNums(nums []any, fn func(float64, float64) float64, accumulator float64) (float64, error) {
-	for _, num := range nums {
-		floatVal, err := numToFloat(num)
+func reduceNums(nums *ConsCell, fn func(float64, float64) float64, accumulator float64) (float64, error) {
+	for nums != nil {
+		num, ok := nums.Car.(*NumberAtom)
+		if !ok {
+			return math.NaN(), errors.New("expected all arguments to be numbers")
+		}
+		floatVal, err := numToFloat(num.Data)
 		if err != nil {
 			return math.NaN(), err
 		}
 		accumulator = fn(accumulator, floatVal)
+		nums = nums.Cdr
 	}
+
 	return accumulator, nil
 }
 

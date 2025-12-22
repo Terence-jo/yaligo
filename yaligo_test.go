@@ -38,24 +38,24 @@ func TestAtom(t *testing.T) {
 	if err != nil {
 		t.Errorf("invalid int atom %v", intTok)
 	}
-	intItem, ok := intAtom.(*IntAtom)
+	intItem, ok := intAtom.(*NumberAtom)
 	if !ok {
-		t.Errorf("failed to convert %v to IntItem", intAtom)
+		t.Errorf("failed to convert %v to NumberItem", intAtom)
 	}
-	desiredInt := IntAtom{Data: 10}
-	if !reflect.DeepEqual(*intItem, desiredInt) {
-		t.Errorf("got %v, wanted %v", *intItem, desiredInt)
+	desiredNumber := NumberAtom{Data: 10}
+	if !reflect.DeepEqual(*intItem, desiredNumber) {
+		t.Errorf("got %v, wanted %v", *intItem, desiredNumber)
 	}
 
 	floatAtom, err := atom(floatTok)
 	if err != nil {
 		t.Errorf("invalid float atom %v", floatTok)
 	}
-	floatItem, ok := floatAtom.(*FloatAtom)
+	floatItem, ok := floatAtom.(*NumberAtom)
 	if !ok {
 		t.Errorf("failed to convert %v to FloatItem", floatAtom)
 	}
-	desiredFloat := FloatAtom{Data: 5.5}
+	desiredFloat := NumberAtom{Data: 5.5}
 	if !reflect.DeepEqual(*floatItem, desiredFloat) {
 		t.Errorf("got %v, wanted %v", *floatItem, desiredFloat)
 	}
@@ -77,13 +77,13 @@ func TestReadFromTokens(t *testing.T) {
 	}
 	innerList := NewList(
 		&SymbolAtom{Data: "-"},
-		&IntAtom{Data: 5},
-		&IntAtom{Data: 6},
+		&NumberAtom{Data: 5},
+		&NumberAtom{Data: 6},
 	)
 	referenceList := NewList(
 		&SymbolAtom{Data: "define"},
 		&SymbolAtom{Data: "x"},
-		&IntAtom{Data: 10},
+		&NumberAtom{Data: 10},
 		&SymbolAtom{Data: "y"},
 		innerList,
 	)
@@ -91,56 +91,100 @@ func TestReadFromTokens(t *testing.T) {
 }
 
 func TestEval(t *testing.T) {
-	list := NewList(
-		&SymbolAtom{Data: "+"},
-		&IntAtom{Data: 1},
-		&IntAtom{Data: 1},
-	)
-	got, err := Eval(list, globalEnv)
-	if err != nil {
-		t.Error(err)
+	tests := []struct {
+		Name   string
+		Code   *ConsCell
+		Result LispExp
+	}{
+		{
+			"simpleAdd",
+			NewList(
+				&SymbolAtom{Data: ADD},
+				&NumberAtom{Data: 1},
+				&NumberAtom{Data: 1},
+			),
+			&NumberAtom{2.0},
+		},
+		{
+			"simpleEq",
+			NewList(
+				&SymbolAtom{Data: EQUAL},
+				&NumberAtom{Data: 1},
+				&NumberAtom{Data: 1},
+			),
+			&SymbolAtom{TRUE},
+		},
+		{
+			"falseEq",
+			NewList(
+				&SymbolAtom{Data: EQUAL},
+				&NumberAtom{Data: 0},
+				&NumberAtom{Data: 1},
+			),
+			&SymbolAtom{FALSE},
+		},
+		{
+			"trueIf",
+			NewList(
+				&SymbolAtom{Data: "if"},
+				NewList(
+					&SymbolAtom{Data: EQUAL},
+					&NumberAtom{Data: 1},
+					&NumberAtom{Data: 1},
+				),
+				&NumberAtom{Data: 5.0},
+				&NumberAtom{Data: 10.0},
+			),
+			&NumberAtom{5.0},
+		},
+		{
+			"falseIf",
+			NewList(
+				&SymbolAtom{Data: "if"},
+				NewList(
+					&SymbolAtom{Data: EQUAL},
+					&NumberAtom{Data: 0},
+					&NumberAtom{Data: 1},
+				),
+				&NumberAtom{Data: 5.0},
+				&NumberAtom{Data: 10.0},
+			),
+			&NumberAtom{10.0},
+		},
+		{
+			"cond",
+			NewList(
+				&SymbolAtom{Data: "cond"},
+				NewList(
+					NewList(
+						&SymbolAtom{Data: EQUAL},
+						&NumberAtom{Data: 0},
+						&NumberAtom{Data: 1},
+					),
+					&NumberAtom{Data: 5.0},
+				),
+				NewList(
+					NewList(
+						&SymbolAtom{Data: EQUAL},
+						&NumberAtom{Data: 1},
+						&NumberAtom{Data: 1},
+					),
+					&NumberAtom{Data: 10.0},
+				),
+			),
+			&NumberAtom{10.0},
+		},
 	}
-	want := 2.0
-	if got != want {
-		t.Errorf("got %v, wanted %v", got, want)
-	}
-	eqProc := NewList(
-		&SymbolAtom{Data: "eq?"},
-		&IntAtom{Data: 1},
-		&IntAtom{Data: 1},
-	)
-	neqProc := NewList(
-		&SymbolAtom{Data: "eq?"},
-		&IntAtom{Data: 0},
-		&IntAtom{Data: 1},
-	)
-	ifList := NewList(
-		&SymbolAtom{Data: "if"},
-		eqProc,
-		&FloatAtom{Data: 5.0},
-		&FloatAtom{Data: 10.0},
-	)
-	got, err = Eval(ifList, globalEnv)
-	if err != nil {
-		t.Error(err)
-	}
-	want = 5.0
-	if got != want {
-		t.Errorf("got %f, wanted %f", got, want)
-	}
-	ifList = NewList(
-		&SymbolAtom{Data: "if"},
-		neqProc,
-		&FloatAtom{Data: 5.0},
-		&FloatAtom{Data: 10.0},
-	)
-	got, err = Eval(ifList, globalEnv)
-	if err != nil {
-		t.Error(err)
-	}
-	want = 10.0
-	if got != want {
-		t.Errorf("got %f, wanted %f", got, want)
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			got, err := Eval(tt.Code, globalEnv)
+			if err != nil {
+				t.Error(err)
+			}
+			if !reflect.DeepEqual(got, tt.Result) {
+				t.Errorf("got %v, wanted %v", got, tt.Result)
+			}
+		})
 	}
 	// test some failure cases
 }

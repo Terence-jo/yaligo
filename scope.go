@@ -1,22 +1,38 @@
 package main
 
+import "errors"
+
+// symbols in standard environment
+const (
+	TRUE  string = "#t"
+	FALSE string = "#f"
+	EQUAL string = "eq?"
+	ADD   string = "+"
+	MULT  string = "*"
+	DIV   string = "/"
+)
+
 type Env struct {
-	local map[string]any
+	local map[string]LispExp
 	outer *Env
 }
 
-func NewEnv(params []string, args []any, outer *Env) *Env {
-	local := make(map[string]any)
+func NewEnv(params []string, args *ConsCell, outer *Env) (*Env, error) {
+	local := make(map[string]LispExp)
 	for i := range params {
-		local[params[i]] = args[i]
+		if args == nil {
+			return nil, errors.New("mismatched params and args lengths")
+		}
+		local[params[i]] = args.Car
+		args = args.Cdr
 	}
 	return &Env{
 		local: local,
 		outer: outer,
-	}
+	}, nil
 }
 
-func (e *Env) SetVar(name string, val any) {
+func (e *Env) SetVar(name string, val LispExp) {
 	e.local[name] = val
 }
 
@@ -33,7 +49,7 @@ func (e *Env) FindEnvWith(varName string) *Env {
 	return e.outer.FindEnvWith(varName)
 }
 
-func (e *Env) FindVar(varName string) any {
+func (e *Env) FindVar(varName string) LispExp {
 	val, ok := e.local[varName]
 	if !ok {
 		return nil
@@ -43,20 +59,24 @@ func (e *Env) FindVar(varName string) any {
 
 func standardEnv() *Env {
 	params := []string{
-		"#t",
-		"#f",
-		"eq?",
-		"+",
-		"*",
-		"/",
+		TRUE,
+		FALSE,
+		EQUAL,
+		ADD,
+		MULT,
+		DIV,
 	}
-	args := []any{
-		true,
-		false,
+	args := NewList([]LispExp{
+		&SymbolAtom{TRUE},
+		&SymbolAtom{FALSE},
 		&BuiltIn{equalOp},
 		&BuiltIn{addOp},
 		&BuiltIn{multOp},
 		&BuiltIn{divOp},
+	}...)
+	env, err := NewEnv(params, args, nil)
+	if err != nil {
+		panic("couldn't evaluate standard environment")
 	}
-	return NewEnv(params, args, nil)
+	return env
 }
