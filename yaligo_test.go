@@ -174,6 +174,29 @@ func TestEval(t *testing.T) {
 			),
 			&NumberAtom{10.0},
 		},
+		{
+			"lambda",
+			NewList(
+				&SymbolAtom{Data: "lambda"},
+				NewList(
+					&SymbolAtom{Data: "x"},
+				),
+				NewList(
+					&SymbolAtom{"+"},
+					&SymbolAtom{"x"},
+					&NumberAtom{2},
+				),
+			),
+			&Procedure{
+				params: NewList(&SymbolAtom{"x"}),
+				body: NewList(
+					&SymbolAtom{"+"},
+					&SymbolAtom{"x"},
+					&NumberAtom{2},
+				),
+				env: globalEnv,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -187,6 +210,7 @@ func TestEval(t *testing.T) {
 		})
 	}
 	// test some failure cases
+	// test lambda
 }
 
 func assertListEqual(t testing.TB, testList *ConsCell, referenceList *ConsCell) {

@@ -10,10 +10,6 @@ var globalEnv = standardEnv()
 
 func Eval(exp LispExp, env *Env) (LispExp, error) {
 	switch exp := exp.(type) {
-	// case *IntAtom:
-	// 	intVal := exp.Data
-	// 	floatVal := float64(intVal)
-	// 	return &NumberAtom{floatVal}, nil
 	case *NumberAtom:
 		return exp, nil
 	case *SymbolAtom:
@@ -99,6 +95,11 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			return expArg, nil
 		case "lambda":
 			// this will involve creating a procedure with the params, body, and env.
+			params, ok := exp.Car.(*ConsCell)
+			if !ok {
+				return nil, errors.New("expected list of symbols for params")
+			}
+			return &Procedure{params, exp.Cdr.Car, env}, nil
 		default:
 			procExp, err := Eval(symbol, env)
 			if err != nil {

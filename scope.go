@@ -17,14 +17,19 @@ type Env struct {
 	outer *Env
 }
 
-func NewEnv(params []string, args *ConsCell, outer *Env) (*Env, error) {
+func NewEnv(params *ConsCell, args *ConsCell, outer *Env) (*Env, error) {
 	local := make(map[string]LispExp)
-	for i := range params {
+	for params != nil {
 		if args == nil {
 			return nil, errors.New("mismatched params and args lengths")
 		}
-		local[params[i]] = args.Car
+		param, ok := params.Car.(*SymbolAtom)
+		if !ok {
+			return nil, errors.New("parameters can only be symbols")
+		}
+		local[param.Data] = args.Car
 		args = args.Cdr
+		params = params.Cdr
 	}
 	return &Env{
 		local: local,
@@ -58,14 +63,14 @@ func (e *Env) FindVar(varName string) LispExp {
 }
 
 func standardEnv() *Env {
-	params := []string{
-		TRUE,
-		FALSE,
-		EQUAL,
-		ADD,
-		MULT,
-		DIV,
-	}
+	params := NewList([]LispExp{
+		&SymbolAtom{TRUE},
+		&SymbolAtom{FALSE},
+		&SymbolAtom{EQUAL},
+		&SymbolAtom{ADD},
+		&SymbolAtom{MULT},
+		&SymbolAtom{DIV},
+	}...)
 	args := NewList([]LispExp{
 		&SymbolAtom{TRUE},
 		&SymbolAtom{FALSE},

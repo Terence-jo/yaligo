@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 )
@@ -12,12 +13,16 @@ type Callable interface {
 }
 
 type Procedure struct {
-	params []string
-	body   *ConsCell
+	params *ConsCell
+	body   LispExp
 	env    *Env
 }
 
 func (p *Procedure) isLispExp() {}
+
+func (p *Procedure) String() string {
+	return fmt.Sprintf("{\n  params: %s,\n  body: %s,\n  env: %+v\n}", p.params, p.body, p.env)
+}
 
 func (p *Procedure) Call(args *ConsCell) (LispExp, error) {
 	env, err := NewEnv(p.params, args, p.env)
@@ -32,6 +37,10 @@ type BuiltIn struct {
 }
 
 func (b *BuiltIn) isLispExp() {}
+
+func (b *BuiltIn) String() string {
+	return "yaligo built-in"
+}
 
 func (b *BuiltIn) Call(args *ConsCell) (LispExp, error) {
 	return b.body(args)
