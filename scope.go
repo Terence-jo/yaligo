@@ -55,7 +55,11 @@ func (e *Env) FindEnvWith(varName string) *Env {
 }
 
 func (e *Env) FindVar(varName string) LispExp {
-	val, ok := e.local[varName]
+	envWithVar := e.FindEnvWith(varName)
+	if envWithVar == nil {
+		return nil
+	}
+	val, ok := envWithVar.local[varName]
 	if !ok {
 		return nil
 	}

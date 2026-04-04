@@ -70,6 +70,7 @@ func addOp(args *ConsCell) (LispExp, error) {
 	}
 	return &NumberAtom{total}, nil
 }
+
 func multOp(args *ConsCell) (LispExp, error) {
 	if args.Car == nil {
 		return nil, errors.New("expected arguments to *")

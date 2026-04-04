@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+type EnvExtension struct {
+	Keys   *ConsCell
+	Values *ConsCell
+}
+
 func TestTokenise(t *testing.T) {
 	exp := "(define x 10)"
 	want := []string{
@@ -92,9 +97,10 @@ func TestReadFromTokens(t *testing.T) {
 
 func TestEval(t *testing.T) {
 	tests := []struct {
-		Name   string
-		Code   *ConsCell
-		Result LispExp
+		Name         string
+		Code         *ConsCell
+		EnvAdditions EnvExtension
+		Result       LispExp
 	}{
 		{
 			"simpleAdd",
@@ -103,6 +109,7 @@ func TestEval(t *testing.T) {
 				&NumberAtom{Data: 1},
 				&NumberAtom{Data: 1},
 			),
+			EnvExtension{nil, nil},
 			&NumberAtom{2.0},
 		},
 		{
@@ -112,6 +119,7 @@ func TestEval(t *testing.T) {
 				&NumberAtom{Data: 1},
 				&NumberAtom{Data: 1},
 			),
+			EnvExtension{nil, nil},
 			&SymbolAtom{TRUE},
 		},
 		{
@@ -121,6 +129,7 @@ func TestEval(t *testing.T) {
 				&NumberAtom{Data: 0},
 				&NumberAtom{Data: 1},
 			),
+			EnvExtension{nil, nil},
 			&SymbolAtom{FALSE},
 		},
 		{
@@ -135,6 +144,7 @@ func TestEval(t *testing.T) {
 				&NumberAtom{Data: 5.0},
 				&NumberAtom{Data: 10.0},
 			),
+			EnvExtension{nil, nil},
 			&NumberAtom{5.0},
 		},
 		{
@@ -149,6 +159,7 @@ func TestEval(t *testing.T) {
 				&NumberAtom{Data: 5.0},
 				&NumberAtom{Data: 10.0},
 			),
+			EnvExtension{nil, nil},
 			&NumberAtom{10.0},
 		},
 		{
@@ -172,6 +183,7 @@ func TestEval(t *testing.T) {
 					&NumberAtom{Data: 10.0},
 				),
 			),
+			EnvExtension{nil, nil},
 			&NumberAtom{10.0},
 		},
 		{
@@ -187,6 +199,7 @@ func TestEval(t *testing.T) {
 					&NumberAtom{2},
 				),
 			),
+			EnvExtension{nil, nil},
 			&Procedure{
 				params: NewList(&SymbolAtom{"x"}),
 				body: NewList(
@@ -197,10 +210,46 @@ func TestEval(t *testing.T) {
 				env: globalEnv,
 			},
 		},
+		{
+			"procCall",
+			NewList(
+				&SymbolAtom{"add-2"},
+				&NumberAtom{2},
+			),
+			EnvExtension{
+				&ConsCell{
+					&SymbolAtom{"add-2"},
+					nil,
+				},
+				&ConsCell{
+					&Procedure{
+						params: NewList(&SymbolAtom{"x"}),
+						body: NewList(
+							&SymbolAtom{ADD},
+							&SymbolAtom{"x"},
+							&NumberAtom{2},
+						),
+						env: globalEnv,
+					},
+					nil,
+				},
+			},
+			&NumberAtom{4},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			got, err := Eval(tt.Code, globalEnv)
+			var env *Env
+			var err error
+			if tt.EnvAdditions.Keys == nil {
+				env = globalEnv
+			} else {
+				env, err = NewEnv(tt.EnvAdditions.Keys, tt.EnvAdditions.Values, globalEnv)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+			got, err := Eval(tt.Code, env)
 			if err != nil {
 				t.Error(err)
 			}

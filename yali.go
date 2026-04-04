@@ -109,7 +109,28 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			if !ok {
 				return nil, errors.New("expected procedure name at head of list")
 			}
-			ret, err := proc.Call(exp)
+
+			var evalArgs func(args *ConsCell) (*ConsCell, error)
+			evalArgs = func(args *ConsCell) (*ConsCell, error) {
+				if args == nil {
+					return nil, nil
+				}
+				tail, err := evalArgs(args.Cdr)
+				if err != nil {
+					return nil, err
+				}
+				argVal, err := Eval(args.Car, env)
+				if err != nil {
+					return nil, err
+				}
+				return Cons(argVal, tail), nil
+			}
+
+			argVals, err := evalArgs(exp)
+			if err != nil {
+				return nil, err
+			}
+			ret, err := proc.Call(argVals)
 			if err != nil {
 				return nil, err
 			}
