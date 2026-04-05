@@ -123,11 +123,11 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 				if args == nil {
 					return nil, nil
 				}
-				tail, err := evalArgs(args.Cdr)
+				argVal, err := Eval(args.Car, env)
 				if err != nil {
 					return nil, err
 				}
-				argVal, err := Eval(args.Car, env)
+				tail, err := evalArgs(args.Cdr)
 				if err != nil {
 					return nil, err
 				}
