@@ -14,7 +14,7 @@ func repl() {
 		fmt.Print("yaligo => ")
 		input := ""
 		for scanner.Scan() {
-			nextInput := scanner.Text()
+			nextInput := scanner.Text() + "\n"
 			for i := range nextInput {
 				if nextInput[i] == '(' {
 					parenSum += 1
@@ -31,7 +31,7 @@ func repl() {
 		if input == ".exit" {
 			return
 		}
-		inputTokens := LexTokens(tokenise(input))
+		inputTokens := lexTokens(tokenise(input))
 		inputExp, _, err := readFromTokens(inputTokens, 0)
 		if err != nil {
 			fmt.Printf("%e\n", err)

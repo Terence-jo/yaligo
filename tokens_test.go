@@ -19,7 +19,7 @@ func TestParseTokens(t *testing.T) {
 		{NUMBER, "6.4"},
 		{CLOSE, ")"},
 	}
-	got := LexTokens(program)
+	got := lexTokens(program)
 
 	if !reflect.DeepEqual(want, got) {
 		t.Errorf("got %+v, wanted %+v", got, want)

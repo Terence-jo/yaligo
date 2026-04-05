@@ -116,7 +116,6 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			}
 			proc, ok := procExp.(Callable)
 			if !ok {
-				fmt.Printf("%v\n", symbol)
 				return nil, errors.New("expected procedure name at head of list")
 			}
 
@@ -207,7 +206,7 @@ func tokenise(chars string) []string {
 		chars, ")", " ) ",
 	)
 	tokens := []string{}
-	for _, token := range strings.Split(chars, " ") {
+	for _, token := range strings.Fields(chars) {
 		if len(token) > 0 {
 			tokens = append(tokens, token)
 		}

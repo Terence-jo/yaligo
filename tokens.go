@@ -49,7 +49,7 @@ var patterns = []Pattern{
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
 }
 
-func LexTokens(programTokenised []string) []Token {
+func lexTokens(programTokenised []string) []Token {
 	var tokens []Token
 	for _, lit := range programTokenised {
 		for _, pattern := range patterns {
