@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -115,6 +116,7 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			}
 			proc, ok := procExp.(Callable)
 			if !ok {
+				fmt.Printf("%v\n", symbol)
 				return nil, errors.New("expected procedure name at head of list")
 			}
 

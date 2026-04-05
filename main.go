@@ -28,6 +28,9 @@ func repl() {
 				break
 			}
 		}
+		if input == ".exit" {
+			return
+		}
 		inputTokens := LexTokens(tokenise(input))
 		inputExp, _, err := readFromTokens(inputTokens, 0)
 		if err != nil {

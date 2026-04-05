@@ -71,6 +71,28 @@ func addOp(args *ConsCell) (LispExp, error) {
 	return &NumberAtom{total}, nil
 }
 
+func subOp(args *ConsCell) (LispExp, error) {
+	if args.Car == nil {
+		return nil, errors.New("expected arguments to -")
+	}
+	if args.Cdr == nil {
+		return nil, errors.New("expected two or more arguments")
+	}
+	firstNum, ok := args.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("- needs numbers")
+	}
+	accumulator := firstNum.Data
+	sub := func(x float64, y float64) float64 {
+		return x - y
+	}
+	total, err := reduceNums(args.Cdr, sub, accumulator)
+	if err != nil {
+		return nil, err
+	}
+	return &NumberAtom{total}, nil
+}
+
 func multOp(args *ConsCell) (LispExp, error) {
 	if args.Car == nil {
 		return nil, errors.New("expected arguments to *")

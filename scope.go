@@ -8,6 +8,7 @@ const (
 	FALSE  string = "#f"
 	EQUAL  string = "eq?"
 	ADD    string = "+"
+	SUB    string = "-"
 	MULT   string = "*"
 	DIV    string = "/"
 	CAR    string = "car"
@@ -78,6 +79,7 @@ func standardEnv() *Env {
 		&SymbolAtom{FALSE},
 		&SymbolAtom{EQUAL},
 		&SymbolAtom{ADD},
+		&SymbolAtom{SUB},
 		&SymbolAtom{MULT},
 		&SymbolAtom{DIV},
 		&SymbolAtom{CAR},
@@ -91,6 +93,7 @@ func standardEnv() *Env {
 		&SymbolAtom{FALSE},
 		&BuiltIn{equalOp},
 		&BuiltIn{addOp},
+		&BuiltIn{subOp},
 		&BuiltIn{multOp},
 		&BuiltIn{divOp},
 		&BuiltIn{func(args *ConsCell) (LispExp, error) { return args.Car, nil }},

@@ -45,7 +45,7 @@ func (t TokenClass) String() string {
 var patterns = []Pattern{
 	{OPEN, regexp.MustCompile(`^(\()`)},
 	{CLOSE, regexp.MustCompile(`^(\))`)},
-	{NUMBER, regexp.MustCompile(`^([0-9]+\.?[0-9]*)`)},
+	{NUMBER, regexp.MustCompile(`^(\-?[0-9]+\.?[0-9]*)`)},
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
 }
 
