@@ -21,7 +21,7 @@ type Procedure struct {
 func (p *Procedure) isLispExp() {}
 
 func (p *Procedure) String() string {
-	return fmt.Sprintf("{\n  params: %s,\n  body: %s,\n  env: %+v\n}", p.params, p.body, p.env)
+	return fmt.Sprintf("(lambda (%s) (%s))", p.params, p.body)
 }
 
 func (p *Procedure) Call(args *ConsCell) (LispExp, error) {

@@ -15,7 +15,7 @@ type ConsCell struct {
 func (c *ConsCell) isLispExp() {}
 
 func (c *ConsCell) String() string {
-	return fmt.Sprintf("{\n  Car: %v,\n  Cdr %v\n}", c.Car, c.Cdr)
+	return fmt.Sprintf("(%v %v)", c.Car, c.Cdr)
 }
 
 type NumberAtom struct {
@@ -25,7 +25,7 @@ type NumberAtom struct {
 func (n *NumberAtom) isLispExp() {}
 
 func (n *NumberAtom) String() string {
-	return fmt.Sprintf("{ Data: %f }", n.Data)
+	return fmt.Sprintf("%f", n.Data)
 }
 
 type SymbolAtom struct {
@@ -35,7 +35,7 @@ type SymbolAtom struct {
 func (s *SymbolAtom) isLispExp() {}
 
 func (s *SymbolAtom) String() string {
-	return fmt.Sprintf("{ Data: %s }", s.Data)
+	return fmt.Sprintf("%s", s.Data)
 }
 
 func Cons(car LispExp, cdr *ConsCell) *ConsCell {

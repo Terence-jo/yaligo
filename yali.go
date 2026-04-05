@@ -18,12 +18,17 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 	case *ConsCell:
 		car := exp.Car
 		exp = exp.Cdr
+		if car == nil {
+			return &ConsCell{nil, nil}, nil
+		}
 		// unquoted list, this means it is a syntactic form or procedure call:
 		symbol, ok := car.(*SymbolAtom)
 		if !ok {
 			return nil, errors.New("expected symbol at head of unquoted list")
 		}
 		switch symbol.Data {
+		case "quote":
+			return exp.Car, nil
 		case "if":
 			test := exp.Car
 			conseq := exp.Cdr.Car
@@ -78,7 +83,10 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			if !ok {
 				return nil, errors.New("expected a symbol as first arg to 'define'")
 			}
-			expArg := exp.Cdr.Car
+			expArg, err := Eval(exp.Cdr.Car, env)
+			if err != nil {
+				return nil, err
+			}
 			env.SetVar(varName.Data, expArg)
 			return expArg, nil
 		case "set!":
@@ -94,7 +102,7 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 			envWithVar.SetVar(varName.Data, expArg)
 			return expArg, nil
 		case "lambda":
-			// this will involve creating a procedure with the params, body, and env.
+			// gather params, body, env and create a Procedure
 			params, ok := exp.Car.(*ConsCell)
 			if !ok {
 				return nil, errors.New("expected list of symbols for params")
@@ -176,6 +184,7 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 			tail = newCell
 			pos = new_pos
 		}
+		pos++
 		return head, pos, nil
 	case CLOSE:
 		return nil, 0, errors.New("unexpected )")

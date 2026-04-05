@@ -67,32 +67,48 @@ func TestAtom(t *testing.T) {
 }
 
 func TestReadFromTokens(t *testing.T) {
-	// These two lines are already tested above, trust them to work
-	exp := "(define x 10 y (- 5 6))"
-	// exp := "(define x 10 y 20)"
-	toks := tokenise(exp)
-	lexed := LexTokens(toks)
-	parsed, _, err := readFromTokens(lexed, 0)
-	if err != nil {
-		t.Error("failed to read tokens")
+	cases := []struct {
+		exp      string
+		expected *ConsCell
+	}{
+		{
+			"(define x 10 y (- 5 6))",
+			NewList(
+				&SymbolAtom{Data: "define"},
+				&SymbolAtom{Data: "x"},
+				&NumberAtom{Data: 10},
+				&SymbolAtom{Data: "y"},
+				NewList(
+					&SymbolAtom{Data: "-"},
+					&NumberAtom{Data: 5},
+					&NumberAtom{Data: 6},
+				),
+			),
+		},
+		{
+			"(lambda (x) (x))",
+			NewList(
+				&SymbolAtom{"lambda"},
+				NewList(&SymbolAtom{"x"}),
+				NewList(&SymbolAtom{"x"}),
+			),
+		},
 	}
-	parsedList, ok := parsed.(*ConsCell)
-	if !ok {
-		t.Error("did not parse to a list")
+	for _, tt := range cases {
+		t.Run(tt.exp, func(t *testing.T) {
+			toks := tokenise(tt.exp)
+			lexed := LexTokens(toks)
+			parsed, _, err := readFromTokens(lexed, 0)
+			if err != nil {
+				t.Error("failed to read tokens")
+			}
+			parsedList, ok := parsed.(*ConsCell)
+			if !ok {
+				t.Error("did not parse to a list")
+			}
+			assertListEqual(t, parsedList, tt.expected)
+		})
 	}
-	innerList := NewList(
-		&SymbolAtom{Data: "-"},
-		&NumberAtom{Data: 5},
-		&NumberAtom{Data: 6},
-	)
-	referenceList := NewList(
-		&SymbolAtom{Data: "define"},
-		&SymbolAtom{Data: "x"},
-		&NumberAtom{Data: 10},
-		&SymbolAtom{Data: "y"},
-		innerList,
-	)
-	assertListEqual(t, parsedList, referenceList)
 }
 
 func TestEval(t *testing.T) {
@@ -236,6 +252,15 @@ func TestEval(t *testing.T) {
 			},
 			&NumberAtom{4},
 		},
+		{
+			"quote",
+			NewList(
+				&SymbolAtom{"quote"},
+				NewList(&SymbolAtom{"quoted"}, &SymbolAtom{"list"}),
+			),
+			EnvExtension{nil, nil},
+			NewList(&SymbolAtom{"quoted"}, &SymbolAtom{"list"}),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
@@ -258,8 +283,6 @@ func TestEval(t *testing.T) {
 			}
 		})
 	}
-	// test some failure cases
-	// test lambda
 }
 
 func assertListEqual(t testing.TB, testList *ConsCell, referenceList *ConsCell) {
@@ -274,23 +297,25 @@ func assertListEqual(t testing.TB, testList *ConsCell, referenceList *ConsCell) 
 		}
 		testNext := testList.Cdr
 		refNext := referenceList.Cdr
-		if testNext != nil {
-			if refNext == nil {
-				t.Errorf("mismatch between testList cdr and reference cdr with %v and nil", testNext)
-			}
-			testList = testNext
-			referenceList = refNext
-		} else {
+		if testNext != nil && refNext == nil {
+			t.Fatalf("mismatch between testList cdr and reference cdr with %v and nil", testNext)
+		}
+		if refNext != nil && testNext == nil {
+			t.Fatalf("mismatch between testList cdr and reference cdr with %v and nil", refNext)
+		}
+		if testNext == nil && refNext == nil {
 			return
 		}
+		testList = testNext
+		referenceList = refNext
 	}
 }
 
 func assertListIter(t testing.TB, testList *ConsCell, referenceList *ConsCell) {
 	t.Helper()
-	got := reflect.Indirect(reflect.ValueOf(testList.Car)).Field(0)
-	want := reflect.Indirect(reflect.ValueOf(referenceList.Car)).Field(0)
-	if !got.Equal(want) {
-		t.Errorf("got %q, wanted %q", got, want)
+	got := testList.Car.String()
+	want := referenceList.Car.String()
+	if got != want {
+		t.Errorf("got %s, wanted %s", got, want)
 	}
 }

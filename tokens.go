@@ -22,8 +22,6 @@ const (
 	CLOSE
 	NUMBER
 	SYMBOL
-	DEFINE
-	IF
 )
 
 var tokens = [...]string{
@@ -31,8 +29,6 @@ var tokens = [...]string{
 	CLOSE:  ")",
 	NUMBER: "NUMBER",
 	SYMBOL: "SYMBOL",
-	DEFINE: "DEFINE",
-	IF:     "IF",
 }
 
 func (t TokenClass) String() string {
@@ -46,9 +42,6 @@ func (t TokenClass) String() string {
 	return s
 }
 
-// Forgoing the full scanning functionality possessed by the
-// std lib `go/scanner` package, just using regexp to determine
-// the correct tokens.
 var patterns = []Pattern{
 	{OPEN, regexp.MustCompile(`^(\()`)},
 	{CLOSE, regexp.MustCompile(`^(\))`)},

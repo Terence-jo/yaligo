@@ -4,12 +4,18 @@ import "errors"
 
 // symbols in standard environment
 const (
-	TRUE  string = "#t"
-	FALSE string = "#f"
-	EQUAL string = "eq?"
-	ADD   string = "+"
-	MULT  string = "*"
-	DIV   string = "/"
+	TRUE   string = "#t"
+	FALSE  string = "#f"
+	EQUAL  string = "eq?"
+	ADD    string = "+"
+	MULT   string = "*"
+	DIV    string = "/"
+	CAR    string = "car"
+	CDR    string = "cdr"
+	BEGIN  string = "begin"
+	CONS   string = "cons"
+	APPEND string = "append"
+	APPLY  string = "apply"
 )
 
 type Env struct {
@@ -74,6 +80,11 @@ func standardEnv() *Env {
 		&SymbolAtom{ADD},
 		&SymbolAtom{MULT},
 		&SymbolAtom{DIV},
+		&SymbolAtom{CAR},
+		&SymbolAtom{CDR},
+		&SymbolAtom{BEGIN},
+		&SymbolAtom{CONS},
+		&SymbolAtom{APPLY},
 	}...)
 	args := NewList([]LispExp{
 		&SymbolAtom{TRUE},
@@ -82,6 +93,27 @@ func standardEnv() *Env {
 		&BuiltIn{addOp},
 		&BuiltIn{multOp},
 		&BuiltIn{divOp},
+		&BuiltIn{func(args *ConsCell) (LispExp, error) { return args.Car, nil }},
+		&BuiltIn{func(args *ConsCell) (LispExp, error) { return args.Cdr, nil }},
+		&BuiltIn{func(args *ConsCell) (LispExp, error) {
+			for args.Cdr != nil {
+				args = args.Cdr
+			}
+			return args.Car, nil
+		}},
+		&BuiltIn{func(args *ConsCell) (LispExp, error) {
+			if args.Car == nil {
+				return nil, errors.New("cons needs at least one argument")
+			}
+			return Cons(args.Car, args.Cdr), nil
+		}},
+		&BuiltIn{func(args *ConsCell) (LispExp, error) {
+			proc, ok := args.Car.(*Procedure)
+			if !ok {
+				return nil, errors.New("apply takes a procedure as its first argument")
+			}
+			return proc.Call(args.Cdr)
+		}},
 	}...)
 	env, err := NewEnv(params, args, nil)
 	if err != nil {
