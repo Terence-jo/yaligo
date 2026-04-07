@@ -20,7 +20,6 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 		if car == nil {
 			return &ConsCell{nil, nil}, nil
 		}
-		// unquoted list, this means it is a syntactic form or procedure call:
 		symbol, ok := car.(*SymbolAtom)
 		if !ok {
 			return nil, errors.New("expected symbol at head of unquoted list")
