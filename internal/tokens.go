@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"regexp"
@@ -50,7 +50,7 @@ var patterns = []Pattern{
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
 }
 
-func tokenise(chars string) []string {
+func Tokenise(chars string) []string {
 	chars = strings.ReplaceAll(
 		chars, "(", " ( ",
 	)
@@ -66,7 +66,7 @@ func tokenise(chars string) []string {
 	return tokens
 }
 
-func lexTokens(programTokenised []string) []Token {
+func LexTokens(programTokenised []string) []Token {
 	var tokens []Token
 	for _, lit := range programTokenised {
 		for _, pattern := range patterns {

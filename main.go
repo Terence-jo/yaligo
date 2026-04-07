@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"yaligo/internal"
 )
 
 func repl() {
-	env := globalEnv
+	env := internal.StandardEnv()
 	parenSum := 0
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
@@ -31,12 +32,12 @@ func repl() {
 		if input == ".exit" {
 			return
 		}
-		inputTokens := lexTokens(tokenise(input))
-		inputExp, _, err := readFromTokens(inputTokens, 0)
+		inputTokens := internal.LexTokens(internal.Tokenise(input))
+		inputExp, _, err := internal.ReadFromTokens(inputTokens, 0)
 		if err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}
-		result, err := Eval(inputExp, env)
+		result, err := internal.Eval(inputExp, env)
 		if err != nil {
 			fmt.Printf("%s\n", err.Error())
 		}

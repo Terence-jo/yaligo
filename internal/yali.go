@@ -1,11 +1,11 @@
-package main
+package internal
 
 import (
 	"errors"
 	"strconv"
 )
 
-var globalEnv = standardEnv()
+var globalEnv = StandardEnv()
 
 func Eval(exp LispExp, env *Env) (LispExp, error) {
 	switch exp := exp.(type) {
@@ -147,7 +147,7 @@ func Eval(exp LispExp, env *Env) (LispExp, error) {
 	return nil, errors.New("type did not match")
 }
 
-func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
+func ReadFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 	if len(tokens) == 0 {
 		return nil, 0, errors.New("unexpected EOF")
 	}
@@ -164,7 +164,7 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 		}
 
 		// read the first element to create the head of the list.
-		car, newPos, err := readFromTokens(tokens, pos)
+		car, newPos, err := ReadFromTokens(tokens, pos)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -173,7 +173,7 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 		pos = newPos
 
 		for tokens[pos].Class != CLOSE {
-			car, new_pos, err := readFromTokens(tokens, pos)
+			car, new_pos, err := ReadFromTokens(tokens, pos)
 			if err != nil {
 				return nil, 0, err
 			}

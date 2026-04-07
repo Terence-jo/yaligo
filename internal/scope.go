@@ -1,4 +1,4 @@
-package main
+package internal
 
 import "errors"
 
@@ -73,7 +73,7 @@ func (e *Env) FindVar(varName string) LispExp {
 	return val
 }
 
-func standardEnv() *Env {
+func StandardEnv() *Env {
 	params := NewList([]LispExp{
 		&SymbolAtom{TRUE},
 		&SymbolAtom{FALSE},
