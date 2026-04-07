@@ -34,11 +34,11 @@ func repl() {
 		inputTokens := lexTokens(tokenise(input))
 		inputExp, _, err := readFromTokens(inputTokens, 0)
 		if err != nil {
-			fmt.Printf("%e\n", err)
+			fmt.Printf("%s\n", err.Error())
 		}
 		result, err := Eval(inputExp, env)
 		if err != nil {
-			fmt.Printf("%e\n", err)
+			fmt.Printf("%s\n", err.Error())
 		}
 		fmt.Println(result.String())
 	}
