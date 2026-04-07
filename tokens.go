@@ -3,6 +3,7 @@ package main
 import (
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 type TokenClass int
@@ -47,6 +48,22 @@ var patterns = []Pattern{
 	{CLOSE, regexp.MustCompile(`^(\))`)},
 	{NUMBER, regexp.MustCompile(`^(\-?[0-9]+\.?[0-9]*)`)},
 	{SYMBOL, regexp.MustCompile(`^('|[^\s();\.]+)`)},
+}
+
+func tokenise(chars string) []string {
+	chars = strings.ReplaceAll(
+		chars, "(", " ( ",
+	)
+	chars = strings.ReplaceAll(
+		chars, ")", " ) ",
+	)
+	tokens := []string{}
+	for _, token := range strings.Fields(chars) {
+		if len(token) > 0 {
+			tokens = append(tokens, token)
+		}
+	}
+	return tokens
 }
 
 func lexTokens(programTokenised []string) []Token {

@@ -5,7 +5,18 @@ import (
 	"testing"
 )
 
-func TestParseTokens(t *testing.T) {
+func TestTokenise(t *testing.T) {
+	exp := "(define x 10)"
+	want := []string{
+		"(", "define", "x", "10", ")",
+	}
+	got := tokenise(exp)
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, wanted %q", got, want)
+	}
+}
+
+func TestLexTokens(t *testing.T) {
 	program := tokenise("(begin + (* 2.7 5) 6.4)")
 	want := []Token{
 		{OPEN, "("},

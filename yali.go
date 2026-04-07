@@ -2,9 +2,7 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
-	"strings"
 )
 
 var globalEnv = standardEnv()
@@ -196,22 +194,6 @@ func readFromTokens(tokens []Token, pos int) (LispExp, int, error) {
 	}
 	pos++
 	return atom, pos, nil
-}
-
-func tokenise(chars string) []string {
-	chars = strings.ReplaceAll(
-		chars, "(", " ( ",
-	)
-	chars = strings.ReplaceAll(
-		chars, ")", " ) ",
-	)
-	tokens := []string{}
-	for _, token := range strings.Fields(chars) {
-		if len(token) > 0 {
-			tokens = append(tokens, token)
-		}
-	}
-	return tokens
 }
 
 func atom(token Token) (LispExp, error) {

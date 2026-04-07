@@ -10,17 +10,6 @@ type EnvExtension struct {
 	Values *ConsCell
 }
 
-func TestTokenise(t *testing.T) {
-	exp := "(define x 10)"
-	want := []string{
-		"(", "define", "x", "10", ")",
-	}
-	got := tokenise(exp)
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got %q, wanted %q", got, want)
-	}
-}
-
 func TestAtom(t *testing.T) {
 	symbolTok := Token{Class: SYMBOL, Lit: "define"}
 	intTok := Token{Class: NUMBER, Lit: "10"}
@@ -97,7 +86,7 @@ func TestReadFromTokens(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.exp, func(t *testing.T) {
 			toks := tokenise(tt.exp)
-			lexed := LexTokens(toks)
+			lexed := lexTokens(toks)
 			parsed, _, err := readFromTokens(lexed, 0)
 			if err != nil {
 				t.Error("failed to read tokens")
