@@ -1,7 +1,6 @@
 package main
 
 import (
-	"reflect"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ func TestAtom(t *testing.T) {
 		t.Errorf("failed to convert %v to SymbolItem", symbolAtom)
 	}
 	desiredSymbol := SymbolAtom{Data: "define"}
-	if !reflect.DeepEqual(*symbolItem, desiredSymbol) {
+	if symbolItem.String() != desiredSymbol.String() {
 		t.Errorf("got %v, wanted %v", *symbolItem, desiredSymbol)
 	}
 
@@ -37,7 +36,7 @@ func TestAtom(t *testing.T) {
 		t.Errorf("failed to convert %v to NumberItem", intAtom)
 	}
 	desiredNumber := NumberAtom{Data: 10}
-	if !reflect.DeepEqual(*intItem, desiredNumber) {
+	if intItem.String() != desiredNumber.String() {
 		t.Errorf("got %v, wanted %v", *intItem, desiredNumber)
 	}
 
@@ -50,7 +49,7 @@ func TestAtom(t *testing.T) {
 		t.Errorf("failed to convert %v to FloatItem", floatAtom)
 	}
 	desiredFloat := NumberAtom{Data: 5.5}
-	if !reflect.DeepEqual(*floatItem, desiredFloat) {
+	if floatItem.String() != desiredFloat.String() {
 		t.Errorf("got %v, wanted %v", *floatItem, desiredFloat)
 	}
 }
@@ -102,10 +101,10 @@ func TestReadFromTokens(t *testing.T) {
 
 func TestEval(t *testing.T) {
 	tests := []struct {
-		Name         string
-		Code         *ConsCell
-		EnvAdditions EnvExtension
-		Result       LispExp
+		name         string
+		code         *ConsCell
+		envAdditions EnvExtension
+		expected     LispExp
 	}{
 		{
 			"simpleAdd",
@@ -252,23 +251,23 @@ func TestEval(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			var env *Env
 			var err error
-			if tt.EnvAdditions.Keys == nil {
+			if tt.envAdditions.Keys == nil {
 				env = globalEnv
 			} else {
-				env, err = NewEnv(tt.EnvAdditions.Keys, tt.EnvAdditions.Values, globalEnv)
+				env, err = NewEnv(tt.envAdditions.Keys, tt.envAdditions.Values, globalEnv)
 				if err != nil {
 					t.Error(err)
 				}
 			}
-			got, err := Eval(tt.Code, env)
+			got, err := Eval(tt.code, env)
 			if err != nil {
 				t.Error(err)
 			}
-			if !reflect.DeepEqual(got, tt.Result) {
-				t.Errorf("got %v, wanted %v", got, tt.Result)
+			if got.String() != tt.expected.String() {
+				t.Errorf("got %v, wanted %v", got, tt.expected)
 			}
 		})
 	}
