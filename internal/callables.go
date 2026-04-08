@@ -48,9 +48,85 @@ func (b *BuiltIn) Call(args *ConsCell) (LispExp, error) {
 
 func equalOp(args *ConsCell) (LispExp, error) {
 	if args.Cdr == nil || args.Cdr.Cdr != nil {
-		return nil, errors.New("expected two arguments to equal?")
+		return nil, errors.New("expected two arguments to eq?")
 	}
 	if reflect.DeepEqual(args.Car, args.Cdr.Car) {
+		return &SymbolAtom{TRUE}, nil
+	}
+	return &SymbolAtom{FALSE}, nil
+}
+
+func gtOp(args *ConsCell) (LispExp, error) {
+	if args.Cdr == nil || args.Cdr.Cdr != nil {
+		return nil, errors.New("expected two arguments to >")
+	}
+	num1, ok := args.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+	num2, ok := args.Cdr.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+
+	if num1.Data > num2.Data {
+		return &SymbolAtom{TRUE}, nil
+	}
+	return &SymbolAtom{FALSE}, nil
+}
+
+func ltOp(args *ConsCell) (LispExp, error) {
+	if args.Cdr == nil || args.Cdr.Cdr != nil {
+		return nil, errors.New("expected two arguments to <")
+	}
+	num1, ok := args.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+	num2, ok := args.Cdr.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+
+	if num1.Data < num2.Data {
+		return &SymbolAtom{TRUE}, nil
+	}
+	return &SymbolAtom{FALSE}, nil
+}
+
+func lteOp(args *ConsCell) (LispExp, error) {
+	if args.Cdr == nil || args.Cdr.Cdr != nil {
+		return nil, errors.New("expected two arguments to <=")
+	}
+	num1, ok := args.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+	num2, ok := args.Cdr.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+
+	if num1.Data <= num2.Data {
+		return &SymbolAtom{TRUE}, nil
+	}
+	return &SymbolAtom{FALSE}, nil
+}
+
+func gteOp(args *ConsCell) (LispExp, error) {
+	if args.Cdr == nil || args.Cdr.Cdr != nil {
+		return nil, errors.New("expected two arguments to >=")
+	}
+	num1, ok := args.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+	num2, ok := args.Cdr.Car.(*NumberAtom)
+	if !ok {
+		return nil, errors.New("expected all arguments to be numbers")
+	}
+
+	if num1.Data >= num2.Data {
 		return &SymbolAtom{TRUE}, nil
 	}
 	return &SymbolAtom{FALSE}, nil

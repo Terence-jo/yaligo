@@ -7,6 +7,10 @@ const (
 	TRUE   string = "#t"
 	FALSE  string = "#f"
 	EQUAL  string = "eq?"
+	GT     string = ">"
+	LT     string = "<"
+	GTE    string = ">="
+	LTE    string = "<="
 	ADD    string = "+"
 	SUB    string = "-"
 	MULT   string = "*"
@@ -78,6 +82,10 @@ func StandardEnv() *Env {
 		&SymbolAtom{TRUE},
 		&SymbolAtom{FALSE},
 		&SymbolAtom{EQUAL},
+		&SymbolAtom{GT},
+		&SymbolAtom{LT},
+		&SymbolAtom{GTE},
+		&SymbolAtom{LTE},
 		&SymbolAtom{ADD},
 		&SymbolAtom{SUB},
 		&SymbolAtom{MULT},
@@ -92,6 +100,10 @@ func StandardEnv() *Env {
 		&SymbolAtom{TRUE},
 		&SymbolAtom{FALSE},
 		&BuiltIn{equalOp},
+		&BuiltIn{gtOp},
+		&BuiltIn{ltOp},
+		&BuiltIn{gteOp},
+		&BuiltIn{lteOp},
 		&BuiltIn{addOp},
 		&BuiltIn{subOp},
 		&BuiltIn{multOp},
